@@ -332,7 +332,10 @@ export default function JapanItinerary() {
   const [itemOrder,    setItemOrder]    = useState({});   // per-day item ordering { dayKey: [id1, id2, ...] }
   const [dragOverTarget, setDragOverTarget] = useState(null); // { dayKey, index } for drop indicator
   const [draggingItemId, setDraggingItemId] = useState(null); // id of item currently being dragged
-  const dragItemRef = useRef(null); // { itemId, fromDayKey, item } — ref avoids stale closure in handlers
+  const dragItemRef    = useRef(null); // { itemId, fromDayKey, item } — ref avoids stale closure in handlers
+  const touchDragRef   = useRef(null); // touch drag state { itemId, fromDayKey, item, clone, offX, offY }
+  const dragOverRef    = useRef(null); // mirrors dragOverTarget for document-level touch handlers
+  const dropFnRef      = useRef(null); // always-fresh drop executor (avoids stale closure in useEffect)
   const [activeTab,   setActiveTab]     = useState("itinerary");
   const [taskFilter,  setTaskFilter]    = useState("all");
   const [synced,      setSynced]        = useState(false);
@@ -385,6 +388,55 @@ export default function JapanItinerary() {
       .then(r => r.json())
       .then(data => { setJpyRate(data.rates.EUR); setRateDate(data.date); })
       .catch(() => { setJpyRate(0.0059); setRateDate("fallback"); });
+  }, []);
+
+  // Touch drag-and-drop (mobile) — document-level handlers to support finger movement across elements
+  useEffect(() => {
+    const onMove = (e) => {
+      if (!touchDragRef.current) return;
+      e.preventDefault(); // prevents scroll while dragging
+      const t = e.touches[0];
+      const { clone, offX, offY } = touchDragRef.current;
+      clone.style.top  = (t.clientY - offY) + "px";
+      clone.style.left = (t.clientX - offX) + "px";
+      // Find which item the finger is over
+      clone.style.visibility = "hidden";
+      const el = document.elementFromPoint(t.clientX, t.clientY);
+      clone.style.visibility = "";
+      if (!el) return;
+      let node = el;
+      while (node && node !== document.body) {
+        if (node.dataset.dItem) {
+          const rect = node.getBoundingClientRect();
+          const idx  = t.clientY < rect.top + rect.height / 2 ? +node.dataset.dIdx : +node.dataset.dIdx + 1;
+          const next = { dayKey: node.dataset.dDay, index: idx };
+          dragOverRef.current = next;
+          setDragOverTarget(next);
+          return;
+        }
+        node = node.parentElement;
+      }
+    };
+    const onEnd = () => {
+      if (!touchDragRef.current) return;
+      const { clone, itemId: fromId, fromDayKey, item: data } = touchDragRef.current;
+      if (clone.parentNode) clone.parentNode.removeChild(clone);
+      if (dropFnRef.current && dragOverRef.current) {
+        const { dayKey: toKey, index: toIdx } = dragOverRef.current;
+        dropFnRef.current(fromDayKey, toKey, fromId, toIdx, data);
+      }
+      touchDragRef.current = null;
+      dragOverRef.current  = null;
+      setDraggingItemId(null);
+      setDragOverTarget(null);
+      dragItemRef.current = null;
+    };
+    document.addEventListener("touchmove", onMove, { passive: false });
+    document.addEventListener("touchend",  onEnd);
+    return () => {
+      document.removeEventListener("touchmove", onMove);
+      document.removeEventListener("touchend",  onEnd);
+    };
   }, []);
 
   const toggleItem = (id) => {
@@ -643,6 +695,19 @@ export default function JapanItinerary() {
   const totalSpent     = allBudgetCats.reduce((s,c) => s+(Number(spentAmts[c.id])||(paidCats[c.id]?c.total:0)), 0);
   const tripProgress = Math.round((doneItems / allItems.length) * 100);
 
+  // Always-fresh drop executor — read by the touch useEffect to avoid stale closure
+  dropFnRef.current = (fromDayKey, toDayKey, fromId, dropIdx, dragData) => {
+    let toBase = [];
+    for (const city of cities) {
+      for (let di2 = 0; di2 < city.days.length; di2++) {
+        if (`${city.name}-${di2}` === toDayKey) { toBase = city.days[di2].items; break; }
+      }
+    }
+    const toCustom = Object.values(customItems[toDayKey] || {});
+    if (fromDayKey === toDayKey) reorderItemDrag(toDayKey, toBase, toCustom, fromId, dropIdx);
+    else moveItemToDay(fromDayKey, toDayKey, fromId, dropIdx, dragData);
+  };
+
   const cdColor = countdown > 30 ? "#047857" : countdown > 14 ? "#b45309" : "#8f0020";
   const inTrip  = new Date() >= DEPARTURE && new Date() <= new Date("2026-05-09");
 
@@ -837,12 +902,15 @@ export default function JapanItinerary() {
                                   <div key={item.id}>
                                     {isDragOver && <div style={{ height:"2px", background:city.color, borderRadius:"2px", margin:"2px 0 4px -24px", opacity:0.75 }} />}
                                     <div
+                                      data-d-item={item.id}
+                                      data-d-day={key}
+                                      data-d-idx={ii}
                                       draggable
                                       onDragStart={e => { dragItemRef.current = { itemId: item.id, fromDayKey: key, item }; setDraggingItemId(item.id); e.dataTransfer.effectAllowed = "move"; }}
                                       onDragEnd={() => { dragItemRef.current = null; setDraggingItemId(null); setDragOverTarget(null); }}
                                       onDragOver={e => { e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect = "move"; const rect = e.currentTarget.getBoundingClientRect(); const idx = e.clientY < rect.top + rect.height / 2 ? ii : ii + 1; if (!dragOverTarget || dragOverTarget.dayKey !== key || dragOverTarget.index !== idx) setDragOverTarget({ dayKey: key, index: idx }); }}
                                       onDrop={e => { e.preventDefault(); e.stopPropagation(); if (!dragItemRef.current) return; const { itemId: fromId, fromDayKey, item: dragData } = dragItemRef.current; const dropIdx = dragOverTarget?.index ?? itemCount; if (fromDayKey === key) reorderItemDrag(key, d.items, customArr, fromId, dropIdx); else moveItemToDay(fromDayKey, key, fromId, dropIdx, dragData); dragItemRef.current = null; setDraggingItemId(null); setDragOverTarget(null); }}
-                                      style={{ position:"relative", paddingBottom:"14px", opacity: isBeingDragged ? 0.35 : 1, cursor: "grab", transition:"opacity 0.15s" }}
+                                      style={{ position:"relative", paddingBottom:"14px", opacity: isBeingDragged ? 0.35 : 1, transition:"opacity 0.15s" }}
                                     >
                                     {/* Timeline dot */}
                                     <div style={{
@@ -952,6 +1020,29 @@ export default function JapanItinerary() {
                                             }}>📍</span>
                                           </a>
                                         )}
+                                        {/* Touch drag handle — mobile only */}
+                                        <span
+                                          onTouchStart={e => {
+                                            e.stopPropagation();
+                                            const touch = e.touches[0];
+                                            const itemEl = e.currentTarget.closest("[data-d-item]");
+                                            const rect = itemEl ? itemEl.getBoundingClientRect() : { top: touch.clientY - 20, left: touch.clientX - 100 };
+                                            const clone = document.createElement("div");
+                                            clone.textContent = item.text;
+                                            clone.style.cssText = `position:fixed;z-index:9999;pointer-events:none;background:#fff;border-radius:6px;padding:10px 14px;box-shadow:0 8px 24px rgba(0,0,0,0.2);font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;color:#1a1c1c;max-width:260px;opacity:0.95;border-left:3px solid ${tc.dot};`;
+                                            clone.style.top  = rect.top  + "px";
+                                            clone.style.left = rect.left + "px";
+                                            document.body.appendChild(clone);
+                                            touchDragRef.current = { itemId: item.id, fromDayKey: key, item, clone, offX: touch.clientX - rect.left, offY: touch.clientY - rect.top };
+                                            dragItemRef.current  = { itemId: item.id, fromDayKey: key, item };
+                                            setDraggingItemId(item.id);
+                                          }}
+                                          style={{
+                                            display:"inline-flex", alignItems:"center", justifyContent:"center",
+                                            fontSize:"14px", touchAction:"none", userSelect:"none",
+                                            color: C.outlineV, padding:"0 2px", opacity:0.55, cursor:"grab",
+                                          }}
+                                        >⠿</span>
                                         {/* Pencil toggle */}
                                         <span
                                           onClick={e => { e.stopPropagation(); setOpenActions(prev => ({...prev, [item.id]: !prev[item.id]})); }}
