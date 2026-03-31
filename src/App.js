@@ -330,6 +330,9 @@ export default function JapanItinerary() {
   const [editingItemType,setEditingItemType] = useState("sight"); // tracks type during edit
   const [itemOverrides,setItemOverrides]= useState({});   // text/type overrides for hardcoded items
   const [itemOrder,    setItemOrder]    = useState({});   // per-day item ordering { dayKey: [id1, id2, ...] }
+  const [dragOverTarget, setDragOverTarget] = useState(null); // { dayKey, index } for drop indicator
+  const [draggingItemId, setDraggingItemId] = useState(null); // id of item currently being dragged
+  const dragItemRef = useRef(null); // { itemId, fromDayKey, item } — ref avoids stale closure in handlers
   const [activeTab,   setActiveTab]     = useState("itinerary");
   const [taskFilter,  setTaskFilter]    = useState("all");
   const [synced,      setSynced]        = useState(false);
@@ -464,6 +467,58 @@ export default function JapanItinerary() {
     setItemOrder(next);
     fbSet("jp-item-order", next);
   };
+  // Reorder item within the same day via drag-and-drop
+  const reorderItemDrag = (dayKey, baseItems, customArr, fromId, toIndex) => {
+    const items = getOrderedDayItems(dayKey, baseItems, customArr);
+    const ids = items.map(i => i.id);
+    const fromIndex = ids.indexOf(fromId);
+    if (fromIndex < 0) return;
+    ids.splice(fromIndex, 1);
+    const insertAt = Math.max(0, Math.min(toIndex > fromIndex ? toIndex - 1 : toIndex, ids.length));
+    ids.splice(insertAt, 0, fromId);
+    const next = { ...itemOrder, [dayKey]: ids };
+    setItemOrder(next);
+    fbSet("jp-item-order", next);
+  };
+
+  // Move item to a different day via drag-and-drop
+  const moveItemToDay = (fromDayKey, toDayKey, fromId, toIndex, item) => {
+    // Hide original item in source day
+    const newHidden = { ...hiddenItems, [fromId]: true };
+    setHiddenItems(newHidden);
+    fbSet("jp-hidden", newHidden);
+
+    // Create new custom item in target day
+    const newId = `moved-${Date.now()}`;
+    const newItem = { id: newId, type: item.type, text: item.text, custom: true };
+    if (item.map) newItem.map = item.map;
+    fbSetItem(toDayKey, newId, newItem);
+    const updatedCustom = { ...customItems, [toDayKey]: { ...(customItems[toDayKey] || {}), [newId]: newItem } };
+    setCustomItems(updatedCustom);
+
+    // Copy checked state to new item
+    if (checkedItems[fromId]) {
+      const newChecked = { ...checkedItems, [newId]: true };
+      setCheckedItems(newChecked);
+      fbSet("jp-items", newChecked);
+    }
+
+    // Find target day base items
+    let toBaseItems = [];
+    for (const city of cities) {
+      for (let dIdx = 0; dIdx < city.days.length; dIdx++) {
+        if (`${city.name}-${dIdx}` === toDayKey) { toBaseItems = city.days[dIdx].items; break; }
+      }
+    }
+    const toCustomArr = Object.values(updatedCustom[toDayKey] || {});
+    const targetOrdered = getOrderedDayItems(toDayKey, toBaseItems, toCustomArr).filter(i => i.id !== newId);
+    const targetIds = targetOrdered.map(i => i.id);
+    targetIds.splice(Math.min(toIndex, targetIds.length), 0, newId);
+    const next = { ...itemOrder, [toDayKey]: targetIds };
+    setItemOrder(next);
+    fbSet("jp-item-order", next);
+  };
+
   const markPaid    = (catId, val) => { const n={...paidCats,[catId]:val}; setPaidCats(n); fbSet("jp-paid",n); };
   const updateSpent = (catId, val) => { const n={...spentAmts,[catId]:val}; setSpentAmts(n); fbSet("jp-spent",n); };
 
@@ -770,14 +825,25 @@ export default function JapanItinerary() {
                                 width:"1px", background:`${C.outlineV}60`,
                               }} />
 
-                              {(() => { const orderedItems = getOrderedDayItems(key, d.items, customArr); const itemCount = orderedItems.length; return orderedItems.map((item, ii) => {
+                              {(() => { const orderedItems = getOrderedDayItems(key, d.items, customArr); const itemCount = orderedItems.length; const itemNodes = orderedItems.map((item, ii) => {
                                 const tc     = typeConfig[item.type] || typeConfig.sight;
                                 const done   = !!checkedItems[item.id];
                                 const noteOn = openNotes[item.id];
                                 const noteVal= notes[item.id] || "";
                                 const isEditing = editingItem === item.id;
+                                const isDragOver = dragOverTarget?.dayKey === key && dragOverTarget?.index === ii;
+                                const isBeingDragged = draggingItemId === item.id;
                                 return (
-                                  <div key={item.id} style={{ position:"relative", paddingBottom:"14px" }}>
+                                  <div key={item.id}>
+                                    {isDragOver && <div style={{ height:"2px", background:city.color, borderRadius:"2px", margin:"2px 0 4px -24px", opacity:0.75 }} />}
+                                    <div
+                                      draggable
+                                      onDragStart={e => { dragItemRef.current = { itemId: item.id, fromDayKey: key, item }; setDraggingItemId(item.id); e.dataTransfer.effectAllowed = "move"; }}
+                                      onDragEnd={() => { dragItemRef.current = null; setDraggingItemId(null); setDragOverTarget(null); }}
+                                      onDragOver={e => { e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect = "move"; const rect = e.currentTarget.getBoundingClientRect(); const idx = e.clientY < rect.top + rect.height / 2 ? ii : ii + 1; if (!dragOverTarget || dragOverTarget.dayKey !== key || dragOverTarget.index !== idx) setDragOverTarget({ dayKey: key, index: idx }); }}
+                                      onDrop={e => { e.preventDefault(); e.stopPropagation(); if (!dragItemRef.current) return; const { itemId: fromId, fromDayKey, item: dragData } = dragItemRef.current; const dropIdx = dragOverTarget?.index ?? itemCount; if (fromDayKey === key) reorderItemDrag(key, d.items, customArr, fromId, dropIdx); else moveItemToDay(fromDayKey, key, fromId, dropIdx, dragData); dragItemRef.current = null; setDraggingItemId(null); setDragOverTarget(null); }}
+                                      style={{ position:"relative", paddingBottom:"14px", opacity: isBeingDragged ? 0.35 : 1, cursor: "grab", transition:"opacity 0.15s" }}
+                                    >
                                     {/* Timeline dot */}
                                     <div style={{
                                       position:"absolute", left:"-18px", top:"4px",
@@ -991,9 +1057,10 @@ export default function JapanItinerary() {
                                     )}
                                       </>
                                     )}
+                                    </div>
                                   </div>
                                 );
-                              }); })()}
+                              }); const finalDropShown = dragOverTarget?.dayKey === key && dragOverTarget?.index === itemCount; return [...itemNodes, finalDropShown ? <div key="__drop-end" style={{ height:"2px", background:city.color, borderRadius:"2px", margin:"2px 0 4px -24px", opacity:0.75 }} /> : null]; })()}
 
                               {/* Restore hidden */}
                               {d.items.some(i => hiddenItems[i.id]) && (
