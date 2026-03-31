@@ -344,6 +344,8 @@ export default function JapanItinerary() {
   const [jpyRate,     setJpyRate]       = useState(null);
   const [rateDate,    setRateDate]      = useState("");
   const [converterDir,setConverterDir]  = useState("jpy-to-eur"); // or "eur-to-jpy"
+  const [packingItems,  setPackingItems]  = useState({});  // { id: { id, text, checked } }
+  const [packingDraft,  setPackingDraft]  = useState("");
 
   const todayRef  = useRef(null);
   const todayIso  = getTodayIso();
@@ -365,6 +367,7 @@ export default function JapanItinerary() {
       ["jp-deleted-budget",  setDeletedBudgetIds],
       ["jp-item-overrides",  setItemOverrides],
       ["jp-item-order",      setItemOrder],
+      ["jp-packing",         setPackingItems],
     ];
     const unsubs = bindings.map(([key, setter]) =>
       onValue(ref(db, `japan2026/${key}`), snap => { if (snap.exists()) setter(snap.val()); })
@@ -569,6 +572,28 @@ export default function JapanItinerary() {
     const next = { ...itemOrder, [toDayKey]: targetIds };
     setItemOrder(next);
     fbSet("jp-item-order", next);
+  };
+
+  const addPackingItem = () => {
+    const text = packingDraft.trim();
+    if (!text) return;
+    const id = `pk-${Date.now()}`;
+    const next = { ...packingItems, [id]: { id, text, checked: false } };
+    setPackingItems(next); fbSet("jp-packing", next);
+    setPackingDraft("");
+  };
+  const togglePackingItem = (id) => {
+    const next = { ...packingItems, [id]: { ...packingItems[id], checked: !packingItems[id].checked } };
+    setPackingItems(next); fbSet("jp-packing", next);
+  };
+  const deletePackingItem = (id) => {
+    const next = { ...packingItems }; delete next[id];
+    setPackingItems(next); fbSet("jp-packing", next);
+  };
+  const clearPackingChecks = () => {
+    const next = {};
+    Object.values(packingItems).forEach(i => { next[i.id] = { ...i, checked: false }; });
+    setPackingItems(next); fbSet("jp-packing", next);
   };
 
   const markPaid    = (catId, val) => { const n={...paidCats,[catId]:val}; setPaidCats(n); fbSet("jp-paid",n); };
@@ -787,6 +812,7 @@ export default function JapanItinerary() {
               ["itinerary","Day by Day"],
               ["tasks", `Bookings${criticalLeft>0?` · ${criticalLeft}`:""}`],
               ["budget","Budget"],
+              ["packing","Packing"],
             ].map(([val,lbl]) => (
               <button key={val} onClick={() => setActiveTab(val)} style={{
                 paddingBottom:"12px", fontSize:"11px", fontWeight:700, letterSpacing:"2px",
@@ -1659,6 +1685,113 @@ export default function JapanItinerary() {
             )}
           </div>
         )}
+        {/* ── PACKING TAB ── */}
+        {activeTab === "packing" && (() => {
+          const items = Object.values(packingItems);
+          const total = items.length;
+          const packed = items.filter(i => i.checked).length;
+          const allPacked = total > 0 && packed === total;
+          return (
+            <div>
+              {/* Header row */}
+              <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:"20px" }}>
+                <div>
+                  <div style={{ fontSize:"9px", letterSpacing:"3px", textTransform:"uppercase", color:C.onSurfaceV, fontWeight:600, marginBottom:"4px" }}>Packing List</div>
+                  {total > 0 && (
+                    <div style={{ fontSize:"12px", color: allPacked ? "#047857" : C.onSurfaceV }}>
+                      {packed}/{total} packed{allPacked ? " ✓" : ""}
+                    </div>
+                  )}
+                </div>
+                {packed > 0 && (
+                  <button onClick={clearPackingChecks} style={{
+                    padding:"5px 14px", borderRadius:"2px", fontSize:"10px", cursor:"pointer",
+                    background:"transparent", border:`1px solid ${C.outlineV}`,
+                    color:C.onSurfaceV, fontFamily:sans, fontWeight:600, letterSpacing:"1px",
+                  }}>CLEAR CHECKS</button>
+                )}
+              </div>
+
+              {/* Progress bar */}
+              {total > 0 && (
+                <div style={{ marginBottom:"24px" }}>
+                  <div style={{ height:"2px", background:C.surfaceHigh, borderRadius:"2px", overflow:"hidden" }}>
+                    <div style={{ height:"100%", width:`${Math.round((packed/total)*100)}%`, background: allPacked ? "#047857" : C.primary, transition:"width 0.4s ease" }} />
+                  </div>
+                </div>
+              )}
+
+              {/* Items */}
+              <div style={{ marginBottom:"16px" }}>
+                {total === 0 && (
+                  <div style={{ textAlign:"center", padding:"32px 0", color:C.onSurfaceV, fontSize:"13px", opacity:0.6 }}>
+                    No items yet — add something below
+                  </div>
+                )}
+                {items.map(item => (
+                  <div key={item.id} style={{
+                    display:"flex", alignItems:"center", gap:"12px",
+                    padding:"10px 0", borderBottom:`1px solid ${C.outlineV}22`,
+                  }}>
+                    {/* Checkbox */}
+                    <div onClick={() => togglePackingItem(item.id)} style={{
+                      width:"18px", height:"18px", borderRadius:"3px", flexShrink:0, cursor:"pointer",
+                      border:`2px solid ${item.checked ? C.primary : C.outlineV}`,
+                      background: item.checked ? C.primary : "transparent",
+                      display:"flex", alignItems:"center", justifyContent:"center",
+                      transition:"all 0.15s",
+                    }}>
+                      {item.checked && <span style={{ color:"#fff", fontSize:"11px", lineHeight:1, fontWeight:700 }}>✓</span>}
+                    </div>
+                    {/* Text */}
+                    <span onClick={() => togglePackingItem(item.id)} style={{
+                      flex:1, fontSize:"14px", cursor:"pointer",
+                      color: item.checked ? C.onSurfaceV : C.onSurface,
+                      textDecoration: item.checked ? "line-through" : "none",
+                      opacity: item.checked ? 0.5 : 1,
+                      transition:"all 0.18s",
+                    }}>{item.text}</span>
+                    {/* Delete */}
+                    <span onClick={() => deletePackingItem(item.id)} style={{
+                      fontSize:"16px", cursor:"pointer", color:C.outlineV, flexShrink:0,
+                      lineHeight:1, padding:"2px 4px",
+                      transition:"color 0.15s",
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.color=C.primary}
+                    onMouseLeave={e => e.currentTarget.style.color=C.outlineV}
+                    >×</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Add item input */}
+              <div style={{
+                display:"flex", gap:"8px", alignItems:"center",
+                padding:"10px 12px", borderRadius:"2px",
+                background:C.surfaceLowest, border:`1px solid ${C.outlineV}`,
+              }}>
+                <input
+                  type="text"
+                  placeholder="Add item… e.g. Passport, adapter, yen cash"
+                  value={packingDraft}
+                  onChange={e => setPackingDraft(e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter") addPackingItem(); }}
+                  style={{
+                    flex:1, background:"transparent", border:"none", outline:"none",
+                    fontSize:"13px", color:C.onSurface, fontFamily:sans,
+                  }}
+                />
+                <button onClick={addPackingItem} disabled={!packingDraft.trim()} style={{
+                  padding:"5px 14px", borderRadius:"2px", fontSize:"10px", cursor:"pointer",
+                  background: packingDraft.trim() ? C.primary : C.surfaceHigh,
+                  border:"none", color: packingDraft.trim() ? "#fff" : C.onSurfaceV,
+                  fontFamily:sans, fontWeight:700, letterSpacing:"1px", flexShrink:0,
+                  transition:"all 0.15s",
+                }}>ADD ↵</button>
+              </div>
+            </div>
+          );
+        })()}
       </main>
 
       {/* ── BOTTOM NAV ── */}
@@ -1673,6 +1806,7 @@ export default function JapanItinerary() {
           { tab:"itinerary", icon:"calendar_today",       label:"Day by Day" },
           { tab:"tasks",     icon:"confirmation_number",  label:"Bookings"   },
           { tab:"budget",    icon:"payments",             label:"Budget"     },
+          { tab:"packing",   icon:"luggage",              label:"Packing"    },
         ].map(item => {
           const active = activeTab === item.tab;
           return (
