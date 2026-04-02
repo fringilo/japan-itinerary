@@ -24,6 +24,12 @@ function fbSetItem(dayKey, itemId, item) {
 function fbRemoveItem(dayKey, itemId) {
   remove(ref(db, `japan2026/jp-custom/${dayKey}/${itemId}`)).catch(console.error);
 }
+function fbSetExpense(catId, expId, exp) {
+  set(ref(db, `japan2026/jp-expenses/${catId}/${expId}`), exp).catch(console.error);
+}
+function fbRemoveExpense(catId, expId) {
+  remove(ref(db, `japan2026/jp-expenses/${catId}/${expId}`)).catch(console.error);
+}
 
 // ─── DESIGN TOKENS ────────────────────────────────────────────────────────────
 const C = {
@@ -346,6 +352,11 @@ export default function JapanItinerary() {
   const [converterDir,setConverterDir]  = useState("jpy-to-eur"); // or "eur-to-jpy"
   const [packingItems,  setPackingItems]  = useState({});  // { id: { id, text, checked } }
   const [packingDraft,  setPackingDraft]  = useState("");
+  const [expenses,      setExpenses]      = useState({});  // { catId: { expId: { id, name, amountEur, amountJpy? } } }
+  const [openExpenses,  setOpenExpenses]  = useState({});  // { catId: bool }
+  const [expDraft,      setExpDraft]      = useState({});  // { catId: { name, amount, currency } }
+  const [editingExp,    setEditingExp]    = useState(null); // { catId, expId }
+  const [expEditDraft,  setExpEditDraft]  = useState({ name:"", amount:"", currency:"eur" });
 
   const todayRef  = useRef(null);
   const todayIso  = getTodayIso();
@@ -375,8 +386,11 @@ export default function JapanItinerary() {
     const customUnsub = onValue(ref(db, `japan2026/jp-custom`), snap => {
       if (snap.exists()) setCustomItems(snap.val());
     });
+    const expUnsub = onValue(ref(db, `japan2026/jp-expenses`), snap => {
+      if (snap.exists()) setExpenses(snap.val());
+    });
     const t = setTimeout(() => setSynced(true), 1000);
-    return () => { unsubs.forEach(u => u()); customUnsub(); clearTimeout(t); };
+    return () => { unsubs.forEach(u => u()); customUnsub(); expUnsub(); clearTimeout(t); };
   }, []);
 
   useEffect(() => {
@@ -594,6 +608,45 @@ export default function JapanItinerary() {
     const next = {};
     Object.values(packingItems).forEach(i => { next[i.id] = { ...i, checked: false }; });
     setPackingItems(next); fbSet("jp-packing", next);
+  };
+
+  const expTotalForCat = (catId, updatedExps) => {
+    const src = updatedExps || expenses[catId] || {};
+    return Object.values(src).reduce((s, e) => s + (e.amountEur || 0), 0);
+  };
+  const addExpense = (catId) => {
+    const d = expDraft[catId] || {};
+    if (!d.amount || !d.name?.trim()) return;
+    const id = `exp-${Date.now()}`;
+    const amtNum = Number(d.amount);
+    const exp = { id, name: d.name.trim() };
+    if (d.currency === "jpy") { exp.amountJpy = amtNum; exp.amountEur = jpyRate ? Math.round(amtNum * jpyRate * 100) / 100 : 0; }
+    else { exp.amountEur = amtNum; }
+    const catExps = { ...(expenses[catId] || {}), [id]: exp };
+    setExpenses(prev => ({ ...prev, [catId]: catExps }));
+    fbSetExpense(catId, id, exp);
+    setExpDraft(prev => ({ ...prev, [catId]: { name:"", amount:"", currency: d.currency || "eur" } }));
+    updateSpent(catId, expTotalForCat(catId, catExps).toFixed(2));
+  };
+  const deleteExpense = (catId, expId) => {
+    const catExps = { ...(expenses[catId] || {}) }; delete catExps[expId];
+    setExpenses(prev => ({ ...prev, [catId]: catExps }));
+    fbRemoveExpense(catId, expId);
+    const newTotal = expTotalForCat(catId, catExps);
+    updateSpent(catId, Object.keys(catExps).length > 0 ? newTotal.toFixed(2) : "");
+  };
+  const saveExpense = (catId, expId) => {
+    const d = expEditDraft;
+    if (!d.amount || !d.name?.trim()) return;
+    const amtNum = Number(d.amount);
+    const exp = { id: expId, name: d.name.trim() };
+    if (d.currency === "jpy") { exp.amountJpy = amtNum; exp.amountEur = jpyRate ? Math.round(amtNum * jpyRate * 100) / 100 : 0; }
+    else { exp.amountEur = amtNum; }
+    const catExps = { ...(expenses[catId] || {}), [expId]: exp };
+    setExpenses(prev => ({ ...prev, [catId]: catExps }));
+    fbSetExpense(catId, expId, exp);
+    updateSpent(catId, expTotalForCat(catId, catExps).toFixed(2));
+    setEditingExp(null);
   };
 
   const markPaid    = (catId, val) => { const n={...paidCats,[catId]:val}; setPaidCats(n); fbSet("jp-paid",n); };
@@ -1558,8 +1611,11 @@ export default function JapanItinerary() {
 
             {allBudgetCats.map(cat => {
               const isPaid = paidCats[cat.id] !== undefined ? paidCats[cat.id] : cat.paid;
-              const spent  = Number(spentAmts[cat.id]) || (isPaid ? cat.total : 0);
+              const catExps = Object.values(expenses[cat.id] || {});
+              const expsTotal = catExps.reduce((s, e) => s + (e.amountEur || 0), 0);
+              const spent  = catExps.length > 0 ? expsTotal : (Number(spentAmts[cat.id]) || (isPaid ? cat.total : 0));
               const pct    = Math.min(100, (spent/cat.total)*100);
+              const expOpen = openExpenses[cat.id];
               const isEditing = editingBudget === cat.id;
               return (
                 <div key={cat.id} style={{
@@ -1633,15 +1689,89 @@ export default function JapanItinerary() {
                   <div style={{ height:"2px", background:C.surfaceHigh, borderRadius:"2px", overflow:"hidden", marginBottom:"8px" }}>
                     <div style={{ height:"100%", width:`${pct}%`, background: isPaid ? "#047857" : C.primary, transition:"width 0.4s" }} />
                   </div>
-                  <div style={{ display:"flex", alignItems:"center", gap:"8px" }}>
-                    <span style={{ fontSize:"10px", color:C.onSurfaceV, flex:1 }}>{cat.note}</span>
-                    <span style={{ fontSize:"10px", color:C.onSurfaceV, flexShrink:0 }}>spent €</span>
-                    <input type="number" min="0"
-                      value={spentAmts[cat.id]!==undefined ? spentAmts[cat.id] : (isPaid ? cat.total : "")}
-                      placeholder="0"
-                      onChange={e => updateSpent(cat.id, e.target.value)}
-                      style={{ width:"70px", background:"transparent", border:"none", borderBottom:`1px solid ${C.outlineV}`, padding:"2px 0", color:C.onSurface, fontSize:"11px", fontFamily:sans, outline:"none", textAlign:"right" }} />
+                  {cat.note && <div style={{ fontSize:"10px", color:C.onSurfaceV, marginBottom:"8px" }}>{cat.note}</div>}
+                  {/* Expenses accordion */}
+                  <div style={{ display:"flex", alignItems:"center", gap:"8px", cursor:"pointer" }}
+                    onClick={() => setOpenExpenses(prev => ({ ...prev, [cat.id]: !prev[cat.id] }))}>
+                    <span style={{ fontSize:"9px", letterSpacing:"1px", fontWeight:700, textTransform:"uppercase", color: expOpen ? C.primary : C.onSurfaceV, flex:1 }}>
+                      {catExps.length > 0 ? `Expenses (${catExps.length})` : "Expenses"} {expOpen ? "▲" : "▼"}
+                    </span>
+                    {catExps.length > 0 && <span style={{ fontSize:"11px", fontWeight:700, color:C.primary }}>€{expsTotal.toFixed(2)}</span>}
+                    {catExps.length === 0 && !expOpen && (
+                      <span style={{ fontSize:"10px", color:C.onSurfaceV }}>spent € <input type="number" min="0"
+                        value={spentAmts[cat.id]!==undefined ? spentAmts[cat.id] : (isPaid ? cat.total : "")}
+                        placeholder="0" onClick={e => e.stopPropagation()}
+                        onChange={e => updateSpent(cat.id, e.target.value)}
+                        style={{ width:"60px", background:"transparent", border:"none", borderBottom:`1px solid ${C.outlineV}`, padding:"2px 0", color:C.onSurface, fontSize:"11px", fontFamily:sans, outline:"none", textAlign:"right" }} /></span>
+                    )}
                   </div>
+                  {expOpen && (
+                    <div style={{ marginTop:"10px", borderTop:`1px solid ${C.outlineV}22`, paddingTop:"10px" }}>
+                      {catExps.length === 0 && <div style={{ fontSize:"11px", color:C.onSurfaceV, opacity:0.5, padding:"4px 0 8px", textAlign:"center" }}>No expenses yet</div>}
+                      {catExps.map(exp => {
+                        const isEditThis = editingExp?.catId === cat.id && editingExp?.expId === exp.id;
+                        return (
+                          <div key={exp.id} style={{ borderBottom:`1px solid ${C.outlineV}11` }}>
+                            {isEditThis ? (
+                              <div style={{ padding:"8px 0", display:"flex", flexDirection:"column", gap:"6px" }}>
+                                <div style={{ display:"flex", gap:"6px", alignItems:"flex-end" }}>
+                                  <input type="text" value={expEditDraft.name} onChange={e => setExpEditDraft(p=>({...p,name:e.target.value}))}
+                                    style={{ flex:2, background:"transparent", border:"none", borderBottom:`1px solid ${C.outline}`, padding:"4px 0", fontSize:"12px", color:C.onSurface, fontFamily:sans, outline:"none" }} />
+                                  <input type="number" min="0" value={expEditDraft.amount} onChange={e => setExpEditDraft(p=>({...p,amount:e.target.value}))}
+                                    style={{ flex:1, background:"transparent", border:"none", borderBottom:`1px solid ${C.outline}`, padding:"4px 0", fontSize:"12px", color:C.onSurface, fontFamily:sans, outline:"none", textAlign:"right" }} />
+                                  <div onClick={() => setExpEditDraft(p=>({...p, currency: p.currency==="jpy"?"eur":"jpy"}))}
+                                    style={{ padding:"3px 8px", borderRadius:"2px", fontSize:"10px", fontWeight:700, cursor:"pointer", border:`1px solid ${C.outlineV}`, color:C.onSurfaceV, whiteSpace:"nowrap", flexShrink:0 }}>
+                                    {expEditDraft.currency==="jpy"?"¥ JPY":"€ EUR"}</div>
+                                </div>
+                                {expEditDraft.currency==="jpy" && expEditDraft.amount && jpyRate && (
+                                  <div style={{ fontSize:"10px", color:C.onSurfaceV }}>= €{(Number(expEditDraft.amount)*jpyRate).toFixed(2)}</div>
+                                )}
+                                <div style={{ display:"flex", gap:"6px", justifyContent:"flex-end" }}>
+                                  <button onClick={() => setEditingExp(null)} style={{ padding:"3px 10px", borderRadius:"2px", fontSize:"9px", cursor:"pointer", background:"transparent", border:`1px solid ${C.outlineV}`, color:C.onSurfaceV, fontFamily:sans, fontWeight:600, letterSpacing:"1px" }}>CANCEL</button>
+                                  <button onClick={() => saveExpense(cat.id, exp.id)} style={{ padding:"3px 10px", borderRadius:"2px", fontSize:"9px", cursor:"pointer", background:C.primary, border:"none", color:"#fff", fontFamily:sans, fontWeight:700, letterSpacing:"1px" }}>SAVE</button>
+                                </div>
+                              </div>
+                            ) : (
+                              <div style={{ display:"flex", alignItems:"center", gap:"8px", padding:"6px 0" }}>
+                                <span style={{ flex:1, fontSize:"12px", color:C.onSurface }}>{exp.name}</span>
+                                {exp.amountJpy && <span style={{ fontSize:"10px", color:C.onSurfaceV }}>¥{exp.amountJpy.toLocaleString()}</span>}
+                                <span style={{ fontSize:"12px", fontWeight:600, color:C.onSurface, minWidth:"52px", textAlign:"right" }}>€{(exp.amountEur||0).toFixed(2)}</span>
+                                <span onClick={() => { setEditingExp({ catId:cat.id, expId:exp.id }); setExpEditDraft({ name:exp.name, amount: exp.amountJpy ? String(exp.amountJpy) : String(exp.amountEur||""), currency: exp.amountJpy ? "jpy" : "eur" }); }}
+                                  style={{ fontSize:"12px", cursor:"pointer", color:C.onSurfaceV, opacity:0.6, padding:"2px 4px" }}>✎</span>
+                                <span onClick={() => deleteExpense(cat.id, exp.id)}
+                                  style={{ fontSize:"15px", cursor:"pointer", color:C.primary, opacity:0.7, padding:"2px 4px" }}>×</span>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                      {/* Add expense row */}
+                      <div style={{ marginTop:"8px" }}>
+                        <div style={{ display:"flex", gap:"6px", alignItems:"flex-end" }}>
+                          <input type="text" placeholder="Expense name"
+                            value={(expDraft[cat.id]||{}).name||""}
+                            onChange={e => setExpDraft(prev => ({ ...prev, [cat.id]: { ...(prev[cat.id]||{}), name: e.target.value } }))}
+                            onKeyDown={e => { if (e.key==="Enter") addExpense(cat.id); }}
+                            style={{ flex:2, background:"transparent", border:"none", borderBottom:`1px solid ${C.outlineV}`, padding:"4px 0", fontSize:"12px", color:C.onSurface, fontFamily:sans, outline:"none" }} />
+                          <input type="number" min="0" placeholder="0"
+                            value={(expDraft[cat.id]||{}).amount||""}
+                            onChange={e => setExpDraft(prev => ({ ...prev, [cat.id]: { ...(prev[cat.id]||{}), amount: e.target.value } }))}
+                            onKeyDown={e => { if (e.key==="Enter") addExpense(cat.id); }}
+                            style={{ flex:1, background:"transparent", border:"none", borderBottom:`1px solid ${C.outlineV}`, padding:"4px 0", fontSize:"12px", color:C.onSurface, fontFamily:sans, outline:"none", textAlign:"right" }} />
+                          <div onClick={() => setExpDraft(prev => ({ ...prev, [cat.id]: { ...(prev[cat.id]||{}), currency: (prev[cat.id]||{}).currency==="jpy"?"eur":"jpy" } }))}
+                            style={{ padding:"3px 8px", borderRadius:"2px", fontSize:"10px", fontWeight:700, cursor:"pointer", border:`1px solid ${C.outlineV}`, color:C.onSurfaceV, whiteSpace:"nowrap", flexShrink:0 }}>
+                            {(expDraft[cat.id]||{}).currency==="jpy"?"¥ JPY":"€ EUR"}</div>
+                          <button onClick={() => addExpense(cat.id)}
+                            style={{ padding:"4px 10px", borderRadius:"2px", fontSize:"10px", fontWeight:700, cursor:"pointer", background:C.primary, border:"none", color:"#fff", fontFamily:sans, letterSpacing:"1px", whiteSpace:"nowrap", flexShrink:0 }}>ADD</button>
+                        </div>
+                        {(expDraft[cat.id]||{}).currency==="jpy" && (expDraft[cat.id]||{}).amount && jpyRate && (
+                          <div style={{ fontSize:"10px", color:C.onSurfaceV, marginTop:"4px" }}>
+                            = €{(Number((expDraft[cat.id]||{}).amount)*jpyRate).toFixed(2)}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                     </>
                   )}
                 </div>
