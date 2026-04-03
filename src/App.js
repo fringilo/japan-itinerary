@@ -67,20 +67,22 @@ const sans  = "'Plus Jakarta Sans', sans-serif";
 
 // ─── TYPE COLOURS ─────────────────────────────────────────────────────────────
 const LIGHT_TYPE_CONFIG = {
-  sight:  { dot:"#3b82f6", label:"Sightseeing",   labelColor:"#1d4ed8" },
-  food:   { dot:"#f59e0b", label:"Food & Markets", labelColor:"#92400e" },
-  coffee: { dot:"#a16207", label:"Coffee",          labelColor:"#a16207" },
-  travel: { dot:"#10b981", label:"Transport",       labelColor:"#047857" },
-  hotel:  { dot:"#6366f1", label:"Hotel",           labelColor:"#4338ca" },
-  book:   { dot:"#8f0020", label:"Needs Booking",  labelColor:"#8f0020" },
+  sight:      { dot:"#3b82f6", label:"Sightseeing",   labelColor:"#1d4ed8" },
+  food:       { dot:"#f59e0b", label:"Food & Markets", labelColor:"#92400e" },
+  restaurant: { dot:"#f97316", label:"Restaurant",     labelColor:"#c2410c" },
+  coffee:     { dot:"#a16207", label:"Coffee",          labelColor:"#a16207" },
+  travel:     { dot:"#10b981", label:"Transport",       labelColor:"#047857" },
+  hotel:      { dot:"#6366f1", label:"Hotel",           labelColor:"#4338ca" },
+  book:       { dot:"#8f0020", label:"Needs Booking",  labelColor:"#8f0020" },
 };
 const DARK_TYPE_CONFIG = {
-  sight:  { dot:"#60a5fa", label:"Sightseeing",   labelColor:"#93c5fd" },
-  food:   { dot:"#fbbf24", label:"Food & Markets", labelColor:"#fcd34d" },
-  coffee: { dot:"#d97706", label:"Coffee",          labelColor:"#fbbf24" },
-  travel: { dot:"#34d399", label:"Transport",       labelColor:"#6ee7b7" },
-  hotel:  { dot:"#818cf8", label:"Hotel",           labelColor:"#a5b4fc" },
-  book:   { dot:"#f87171", label:"Needs Booking",  labelColor:"#fca5a5" },
+  sight:      { dot:"#60a5fa", label:"Sightseeing",   labelColor:"#93c5fd" },
+  food:       { dot:"#fbbf24", label:"Food & Markets", labelColor:"#fcd34d" },
+  restaurant: { dot:"#fb923c", label:"Restaurant",     labelColor:"#fdba74" },
+  coffee:     { dot:"#d97706", label:"Coffee",          labelColor:"#fbbf24" },
+  travel:     { dot:"#34d399", label:"Transport",       labelColor:"#6ee7b7" },
+  hotel:      { dot:"#818cf8", label:"Hotel",           labelColor:"#a5b4fc" },
+  book:       { dot:"#f87171", label:"Needs Booking",  labelColor:"#fca5a5" },
 };
 
 const LIGHT_URGENCY = {
@@ -530,16 +532,20 @@ export default function JapanItinerary() {
   const toggleDay  = (key) => setExpandedDays(prev => ({ ...prev, [key]: prev[key] === false ? true : false }));
   const saveNote   = (id, val) => { const n = {...notes,[id]:val}; setNotes(n); fbSet("jp-notes",n); };
 
-  const openAddForm = (key) => { setDraft({ text:"", type:"sight", map:"", bookingUrl:"", bookingNote:"" }); setAddingTo(key); };
+  const openAddForm = (key) => { setDraft({ text:"", type:"sight", map:"", bookingUrl:"", bookingNote:"", needsBooking:false }); setAddingTo(key); };
   const cancelAdd   = () => setAddingTo(null);
   const commitAdd   = (key) => {
     if (!draft.text.trim()) return;
     const id = `custom-${Date.now()}`;
     const newItem = { id, type:draft.type, text:draft.text.trim(), custom:true };
     if (draft.map.trim()) newItem.map = draft.map.trim();
-    if (draft.bookingUrl.trim()) {
-      newItem.booking = { url: draft.bookingUrl.trim() };
-      if (draft.bookingNote.trim()) newItem.booking.note = draft.bookingNote.trim();
+    const hasBooking = draft.needsBooking || draft.type === "book";
+    if (hasBooking) {
+      newItem.needsBooking = true;
+      if (draft.bookingUrl.trim()) {
+        newItem.booking = { url: draft.bookingUrl.trim() };
+        if (draft.bookingNote.trim()) newItem.booking.note = draft.bookingNote.trim();
+      }
     }
     fbSetItem(key, id, newItem);
     setCustomItems(prev => ({ ...prev, [key]: { ...(prev[key]||{}), [id]: newItem } }));
@@ -1410,10 +1416,10 @@ export default function JapanItinerary() {
                                       </div>
                                       {/* Action toggle + map pin */}
                                       <div style={{ flexShrink:0, paddingTop:"2px", display:"flex", gap:"4px", alignItems:"center" }}>
-                                        {(item.type==="book" || (item.booking?.url && !bookingDone[item.id])) && !done && (
+                                        {(item.type==="book" || item.needsBooking || item.booking?.url) && !bookingDone[item.id] && !done && (
                                           <span style={{ fontSize:"7px", color:C.primary, background:`${C.primary}10`, padding:"2px 5px", borderRadius:"2px", letterSpacing:"1px", fontWeight:700 }}>BOOK</span>
                                         )}
-                                        {item.booking?.url && bookingDone[item.id] && (
+                                        {(item.needsBooking || item.booking?.url) && bookingDone[item.id] && (
                                           <span style={{ fontSize:"7px", color:"#047857", background:"rgba(4,120,87,0.1)", padding:"2px 5px", borderRadius:"2px", letterSpacing:"1px", fontWeight:700 }}>✓ BOOKED</span>
                                         )}
                                         {noteVal && !openActions[item.id] && (
@@ -1469,7 +1475,7 @@ export default function JapanItinerary() {
                                     </div>
 
                                     {/* Booking indicator */}
-                                    {item.booking?.url && (
+                                    {(item.booking?.url || (item.needsBooking && !item.booking?.url) || item.type==="book") && (
                                       <div style={{ marginTop:"7px", display:"flex", alignItems:"center", gap:"8px" }}>
                                         <span
                                           onClick={e => { e.stopPropagation(); toggleBookingDone(item.id); }}
@@ -1482,15 +1488,17 @@ export default function JapanItinerary() {
                                           }}>
                                           {bookingDone[item.id] && <span style={{ color:"#fff", fontSize:"9px", lineHeight:1 }}>✓</span>}
                                         </span>
-                                        <a href={item.booking.url} target="_blank" rel="noopener noreferrer"
-                                          onClick={e => e.stopPropagation()}
-                                          style={{
-                                            fontSize:"10px", fontWeight:700, letterSpacing:"1px",
-                                            textTransform:"uppercase", textDecoration:"none",
-                                            color: bookingDone[item.id] ? "#047857" : C.primary,
-                                          }}>
-                                          {bookingDone[item.id] ? "✓ Booked" : "⚡ Book now"}
-                                        </a>
+                                        {(item.booking?.url || item.map) ? (
+                                          <a href={item.booking?.url || item.map} target="_blank" rel="noopener noreferrer"
+                                            onClick={e => e.stopPropagation()}
+                                            style={{ fontSize:"10px", fontWeight:700, letterSpacing:"1px", textTransform:"uppercase", textDecoration:"none", color: bookingDone[item.id] ? "#047857" : C.primary }}>
+                                            {bookingDone[item.id] ? "✓ Booked" : "⚡ Book now"}
+                                          </a>
+                                        ) : (
+                                          <span style={{ fontSize:"10px", fontWeight:700, letterSpacing:"1px", textTransform:"uppercase", color: bookingDone[item.id] ? "#047857" : C.primary }}>
+                                            {bookingDone[item.id] ? "✓ Booked" : "Needs booking"}
+                                          </span>
+                                        )}
                                         {item.booking.note && (
                                           <span style={{ fontSize:"10px", color:C.onSurfaceV, fontStyle:"italic" }}>— {item.booking.note}</span>
                                         )}
@@ -1610,11 +1618,11 @@ export default function JapanItinerary() {
                                 marginTop:"8px", padding:"12px", borderRadius:"2px",
                                 background:C.surfaceLowest, border:`1px solid ${C.outlineV}`,
                               }}>
-                                {/* Type pills */}
-                                <div style={{ display:"flex", gap:"6px", flexWrap:"wrap", marginBottom:"10px" }}>
-                                  {Object.entries({ sight:"Sight", food:"Food", coffee:"Coffee", travel:"Travel", hotel:"Hotel", book:"Book" }).map(([val, lbl]) => (
-                                    <button key={val} onClick={() => setDraft(p=>({...p,type:val}))} style={{
-                                      padding:"3px 10px", borderRadius:"999px", fontSize:"9px", cursor:"pointer",
+                                {/* Primary type pills */}
+                                <div style={{ display:"flex", gap:"5px", flexWrap:"wrap", marginBottom:"6px" }}>
+                                  {Object.entries({ sight:"Sight", food:"Food", restaurant:"Restaurant", coffee:"Coffee", travel:"Travel", hotel:"Hotel" }).map(([val, lbl]) => (
+                                    <button key={val} onClick={() => setDraft(p=>({...p, type:val}))} style={{
+                                      padding:"3px 9px", borderRadius:"999px", fontSize:"9px", cursor:"pointer",
                                       fontWeight:700, letterSpacing:"1px", textTransform:"uppercase", fontFamily:sans,
                                       background: draft.type===val ? typeConfig[val].dot : "transparent",
                                       border:`1px solid ${draft.type===val ? typeConfig[val].dot : C.outlineV}`,
@@ -1622,6 +1630,17 @@ export default function JapanItinerary() {
                                       transition:"all 0.15s",
                                     }}>{lbl}</button>
                                   ))}
+                                </div>
+                                {/* Needs Booking toggle */}
+                                <div style={{ marginBottom:"10px" }}>
+                                  <button onClick={() => setDraft(p=>({...p, needsBooking:!p.needsBooking, bookingUrl:"", bookingNote:""}))} style={{
+                                    padding:"3px 9px", borderRadius:"999px", fontSize:"9px", cursor:"pointer",
+                                    fontWeight:700, letterSpacing:"1px", textTransform:"uppercase", fontFamily:sans,
+                                    background: draft.needsBooking ? `${C.primary}15` : "transparent",
+                                    border:`1px solid ${draft.needsBooking ? C.primary : C.outlineV}`,
+                                    color: draft.needsBooking ? C.primary : C.onSurfaceV,
+                                    transition:"all 0.15s",
+                                  }}>🔖 Needs Booking</button>
                                 </div>
                                 <input autoFocus type="text"
                                   placeholder="What did you discover? e.g. 🍣 Sushi Saito — hidden alley, incredible omakase"
@@ -1646,46 +1665,33 @@ export default function JapanItinerary() {
                                     padding:"4px 0", color:C.onSurfaceV, fontSize:"11px",
                                     fontFamily:sans, outline:"none",
                                   }} />
-                                {/* Booking section */}
-                                <div style={{ borderTop:`1px solid ${C.outlineV}44`, paddingTop:"8px", marginBottom:"10px" }}>
-                                  <button onClick={() => setDraft(p=>({...p, bookingUrl: p.bookingUrl==="" && !p._bookingOpen ? " " : "", bookingNote:"", _bookingOpen:!p._bookingOpen}))}
-                                    style={{
-                                      background: draft._bookingOpen ? `${C.primary}15` : "transparent",
-                                      border:`1px solid ${draft._bookingOpen ? C.primary : C.outlineV}`,
-                                      borderRadius:"999px", padding:"3px 10px", cursor:"pointer",
-                                      fontSize:"9px", fontWeight:700, letterSpacing:"1px",
-                                      textTransform:"uppercase", fontFamily:sans,
-                                      color: draft._bookingOpen ? C.primary : C.onSurfaceV,
-                                    }}>
-                                    {draft._bookingOpen ? "✕ Remove booking" : "+ Add booking"}
-                                  </button>
-                                  {draft._bookingOpen && (
-                                    <div style={{ marginTop:"8px", display:"flex", flexDirection:"column", gap:"6px" }}>
-                                      <input type="text"
-                                        placeholder="Booking URL (Klook, official site…)"
-                                        value={draft.bookingUrl.trim() === "" ? "" : draft.bookingUrl}
-                                        onChange={e => setDraft(p=>({...p, bookingUrl:e.target.value}))}
-                                        style={{
-                                          width:"100%", boxSizing:"border-box",
-                                          background:"transparent", border:"none",
-                                          borderBottom:`1px solid ${C.primary}66`,
-                                          padding:"4px 0", color:C.onSurface, fontSize:"11px",
-                                          fontFamily:sans, outline:"none",
-                                        }} />
-                                      <input type="text"
-                                        placeholder="Note (optional) — e.g. Book 2 weeks ahead"
-                                        value={draft.bookingNote}
-                                        onChange={e => setDraft(p=>({...p, bookingNote:e.target.value}))}
-                                        style={{
-                                          width:"100%", boxSizing:"border-box",
-                                          background:"transparent", border:"none",
-                                          borderBottom:`1px solid ${C.outlineV}`,
-                                          padding:"4px 0", color:C.onSurfaceV, fontSize:"11px",
-                                          fontFamily:sans, outline:"none",
-                                        }} />
-                                    </div>
-                                  )}
-                                </div>
+                                {/* Booking fields — shown when Needs Booking is active */}
+                                {draft.needsBooking && (
+                                  <div style={{ borderTop:`1px solid ${C.primary}22`, paddingTop:"8px", marginBottom:"10px", display:"flex", flexDirection:"column", gap:"6px" }}>
+                                    <input type="text"
+                                      placeholder="Booking URL (Klook, official site…)"
+                                      value={draft.bookingUrl}
+                                      onChange={e => setDraft(p=>({...p, bookingUrl:e.target.value}))}
+                                      style={{
+                                        width:"100%", boxSizing:"border-box",
+                                        background:"transparent", border:"none",
+                                        borderBottom:`1px solid ${C.primary}66`,
+                                        padding:"4px 0", color:C.onSurface, fontSize:"11px",
+                                        fontFamily:sans, outline:"none",
+                                      }} />
+                                    <input type="text"
+                                      placeholder="Note (optional) — e.g. Book 2 weeks ahead"
+                                      value={draft.bookingNote}
+                                      onChange={e => setDraft(p=>({...p, bookingNote:e.target.value}))}
+                                      style={{
+                                        width:"100%", boxSizing:"border-box",
+                                        background:"transparent", border:"none",
+                                        borderBottom:`1px solid ${C.outlineV}`,
+                                        padding:"4px 0", color:C.onSurfaceV, fontSize:"11px",
+                                        fontFamily:sans, outline:"none",
+                                      }} />
+                                  </div>
+                                )}
                                 <div style={{ display:"flex", gap:"8px", justifyContent:"flex-end" }}>
                                   <button onClick={cancelAdd} style={{
                                     padding:"5px 14px", borderRadius:"2px", fontSize:"10px", cursor:"pointer",
@@ -1845,6 +1851,70 @@ export default function JapanItinerary() {
                 </div>
               );
             })}
+
+            {/* ── From Itinerary ── */}
+            {(() => {
+              const bookingItems = [];
+              cities.forEach(city => {
+                city.days.forEach((day, dIdx) => {
+                  const dayKey = `${city.name}-${dIdx}`;
+                  const customArr = Object.values(customItems[dayKey] || {});
+                  getOrderedDayItems(dayKey, day.items, customArr).forEach(item => {
+                    if (item.type === "book" || item.needsBooking || item.booking?.url) {
+                      bookingItems.push({ item, city, day });
+                    }
+                  });
+                });
+              });
+              if (!bookingItems.length) return null;
+              const filtered = taskFilter === "pending" ? bookingItems.filter(({item}) => !bookingDone[item.id])
+                             : taskFilter === "done"    ? bookingItems.filter(({item}) =>  bookingDone[item.id])
+                             : bookingItems;
+              if (!filtered.length) return null;
+              const pendingCount = filtered.filter(({item}) => !bookingDone[item.id]).length;
+              return (
+                <div style={{ marginBottom:"28px" }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:"10px", marginBottom:"10px" }}>
+                    <span style={{ fontSize:"8px", letterSpacing:"3px", color:C.primary, fontWeight:700, textTransform:"uppercase" }}>From Itinerary</span>
+                    <div style={{ flex:1, height:"1px", background:`${C.primary}25` }} />
+                    <span style={{ fontSize:"9px", color:`${C.primary}88` }}>
+                      {pendingCount > 0 ? `${pendingCount} pending` : "all booked ✓"}
+                    </span>
+                  </div>
+                  {filtered.map(({ item, city, day }) => {
+                    const done = !!bookingDone[item.id];
+                    const bookUrl = item.booking?.url || (item.type==="book" ? item.map : null);
+                    const tc = typeConfig[item.type] || typeConfig.book;
+                    return (
+                      <div key={item.id} onClick={() => toggleBookingDone(item.id)} style={{
+                        display:"flex", alignItems:"flex-start", gap:"12px",
+                        padding:"12px 14px", marginBottom:"3px", cursor:"pointer",
+                        background: done ? C.surfaceLow : `${C.primary}07`,
+                        border:`1px solid ${done ? C.outlineV+"33" : C.primary+"22"}`,
+                        borderRadius:"2px", transition:"all 0.18s", opacity: done ? 0.55 : 1,
+                      }}>
+                        <div style={{ width:"16px", height:"16px", borderRadius:"2px", flexShrink:0, marginTop:"2px", border:`2px solid ${done ? C.primary : C.primary+"55"}`, background: done ? C.primary : "transparent", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                          {done && <span style={{ color:"#fff", fontSize:"10px", fontWeight:700 }}>✓</span>}
+                        </div>
+                        <div style={{ flex:1 }}>
+                          <div style={{ fontSize:"13px", color: done ? C.onSurfaceV : C.onSurface, textDecoration: done ? "line-through" : "none", lineHeight:1.5 }}>{item.text}</div>
+                          <div style={{ display:"flex", gap:"10px", marginTop:"4px", alignItems:"center", flexWrap:"wrap" }}>
+                            <span style={{ fontSize:"8px", letterSpacing:"1.5px", color:`${C.primary}77`, fontWeight:700, textTransform:"uppercase" }}>{city.name} · {day.date}</span>
+                            <span style={{ fontSize:"8px", letterSpacing:"1px", color:tc.labelColor, fontWeight:600, textTransform:"uppercase" }}>{tc.label}</span>
+                            {bookUrl && !done && (
+                              <a href={bookUrl} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ fontSize:"10px", color:C.outline, textDecoration:"none" }}>→ open link</a>
+                            )}
+                            {item.booking?.note && (
+                              <span style={{ fontSize:"10px", color:C.onSurfaceV, fontStyle:"italic" }}>{item.booking.note}</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
 
             {/* Add booking item */}
             {addingTask ? (
