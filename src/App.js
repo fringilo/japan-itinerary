@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { initializeApp } from "firebase/app";
 import { getDatabase, ref, onValue, set, remove } from "firebase/database";
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, GoogleAuthProvider, signInWithRedirect, getRedirectResult } from "firebase/auth";
 
 // ─── FIREBASE ─────────────────────────────────────────────────────────────────
 const firebaseConfig = {
@@ -414,6 +414,10 @@ export default function JapanItinerary() {
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, u => { setUser(u); setAuthLoading(false); });
+    getRedirectResult(auth).catch(err => {
+      setLoginError(err.message.replace("Firebase: ", "").replace(/ \(auth\/.*\)\.?/, ""));
+      setAuthLoading(false);
+    });
     return unsub;
   }, []);
 
@@ -906,10 +910,9 @@ export default function JapanItinerary() {
       setLoginError(err.message.replace("Firebase: ", "").replace(/ \(auth\/.*\)\.?/, ""));
     }
   };
-  const handleGoogleLogin = async () => {
+  const handleGoogleLogin = () => {
     setLoginError("");
-    try { await signInWithPopup(auth, googleProvider); }
-    catch (err) { setLoginError(err.message.replace("Firebase: ", "").replace(/ \(auth\/.*\)\.?/, "")); }
+    signInWithRedirect(auth, googleProvider);
   };
   const handleSignOut = () => signOut(auth);
 
