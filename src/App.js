@@ -913,7 +913,8 @@ export default function JapanItinerary() {
       await signInWithPopup(auth, googleProvider);
     } catch (err) {
       console.error("Google login error:", err.code, err.message);
-      setLoginError(`${err.code}: ${err.message}`);
+      if (err.code === "auth/popup-closed-by-user" || err.code === "auth/cancelled-popup-request") return;
+      setLoginError(err.message.replace("Firebase: ", "").replace(/ \(auth\/.*\)\.?/, ""));
     }
   };
   const handleSignOut = () => signOut(auth);
