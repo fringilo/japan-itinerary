@@ -35,7 +35,7 @@ function fbRemoveExpense(catId, expId) {
 }
 
 // ─── DESIGN TOKENS ────────────────────────────────────────────────────────────
-const C = {
+const LIGHT_C = {
   primary:    "#8f0020",
   primary2:   "#bc002d",
   surface:    "#f9f9f9",
@@ -48,25 +48,52 @@ const C = {
   outlineV:   "#e4bdbc",
   charcoal:   "#2d2d2d",
 };
+const DARK_C = {
+  primary:    "#bc002d",
+  primary2:   "#e03050",
+  surface:    "#181818",
+  surfaceLow: "#1e1e1e",
+  surfaceHigh:"#2d2d2d",
+  surfaceLowest: "#121212",
+  onSurface:  "#f0ece8",
+  onSurfaceV: "#9e8880",
+  outline:    "#5a3535",
+  outlineV:   "#3d2828",
+  charcoal:   "#e0dbd8",
+};
 
 const serif = "'Noto Serif', serif";
 const sans  = "'Plus Jakarta Sans', sans-serif";
 
-// ─── TYPE COLOURS (light editorial palette) ────────────────────────────────────
-const typeConfig = {
-  sight:  { dot:"#3b82f6", label:"Sightseeing",    labelColor:"#1d4ed8" },
-  food:   { dot:"#f59e0b", label:"Food & Markets",  labelColor:"#92400e" },
-  coffee: { dot:"#a16207", label:"Coffee",           labelColor:"#a16207" },
-  travel: { dot:"#10b981", label:"Transport",        labelColor:"#047857" },
-  hotel:  { dot:"#6366f1", label:"Hotel",            labelColor:"#4338ca" },
-  book:   { dot:"#8f0020", label:"Needs Booking",   labelColor:"#8f0020" },
+// ─── TYPE COLOURS ─────────────────────────────────────────────────────────────
+const LIGHT_TYPE_CONFIG = {
+  sight:  { dot:"#3b82f6", label:"Sightseeing",   labelColor:"#1d4ed8" },
+  food:   { dot:"#f59e0b", label:"Food & Markets", labelColor:"#92400e" },
+  coffee: { dot:"#a16207", label:"Coffee",          labelColor:"#a16207" },
+  travel: { dot:"#10b981", label:"Transport",       labelColor:"#047857" },
+  hotel:  { dot:"#6366f1", label:"Hotel",           labelColor:"#4338ca" },
+  book:   { dot:"#8f0020", label:"Needs Booking",  labelColor:"#8f0020" },
+};
+const DARK_TYPE_CONFIG = {
+  sight:  { dot:"#60a5fa", label:"Sightseeing",   labelColor:"#93c5fd" },
+  food:   { dot:"#fbbf24", label:"Food & Markets", labelColor:"#fcd34d" },
+  coffee: { dot:"#d97706", label:"Coffee",          labelColor:"#fbbf24" },
+  travel: { dot:"#34d399", label:"Transport",       labelColor:"#6ee7b7" },
+  hotel:  { dot:"#818cf8", label:"Hotel",           labelColor:"#a5b4fc" },
+  book:   { dot:"#f87171", label:"Needs Booking",  labelColor:"#fca5a5" },
 };
 
-const urgencyConfig = {
-  critical: { color:"#8f0020", label:"CRITICAL", bg:"rgba(143,0,32,0.07)" },
-  high:     { color:"#b45309", label:"HIGH",     bg:"rgba(180,83,9,0.07)" },
+const LIGHT_URGENCY = {
+  critical: { color:"#8f0020", label:"CRITICAL", bg:"rgba(143,0,32,0.07)"   },
+  high:     { color:"#b45309", label:"HIGH",     bg:"rgba(180,83,9,0.07)"   },
   medium:   { color:"#6366f1", label:"MEDIUM",   bg:"rgba(99,102,241,0.07)" },
-  low:      { color:"#047857", label:"LOW",       bg:"rgba(4,120,87,0.07)" },
+  low:      { color:"#047857", label:"LOW",       bg:"rgba(4,120,87,0.07)"  },
+};
+const DARK_URGENCY = {
+  critical: { color:"#f87171", label:"CRITICAL", bg:"rgba(248,113,113,0.14)"  },
+  high:     { color:"#fbbf24", label:"HIGH",     bg:"rgba(251,191,36,0.14)"   },
+  medium:   { color:"#818cf8", label:"MEDIUM",   bg:"rgba(129,140,248,0.14)"  },
+  low:      { color:"#4ade80", label:"LOW",       bg:"rgba(74,222,128,0.14)"  },
 };
 
 // ─── DEPARTURE & HELPERS ──────────────────────────────────────────────────────
@@ -319,6 +346,11 @@ const cities = [
 
 // ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
 export default function JapanItinerary() {
+  const [darkMode,    setDarkMode]       = useState(() => localStorage.getItem("jp-dark") === "true");
+  const C             = darkMode ? DARK_C : LIGHT_C;
+  const typeConfig    = darkMode ? DARK_TYPE_CONFIG  : LIGHT_TYPE_CONFIG;
+  const urgencyConfig = darkMode ? DARK_URGENCY      : LIGHT_URGENCY;
+
   const [user,        setUser]           = useState(null);
   const [authLoading, setAuthLoading]   = useState(true);
   const [loginEmail,  setLoginEmail]    = useState("");
@@ -917,7 +949,8 @@ export default function JapanItinerary() {
       setLoginError(err.message.replace("Firebase: ", "").replace(/ \(auth\/.*\)\.?/, ""));
     }
   };
-  const handleSignOut = () => signOut(auth);
+  const handleSignOut  = () => signOut(auth);
+  const toggleDark     = () => { const n = !darkMode; setDarkMode(n); localStorage.setItem("jp-dark", n); };
 
   // ── AUTH SCREENS ─────────────────────────────────────────────────────────────
   if (authLoading) return (
@@ -980,7 +1013,7 @@ export default function JapanItinerary() {
   );
 
   return (
-    <div style={{ minHeight:"100vh", background:C.surface, color:C.onSurface, fontFamily:sans }}>
+    <div style={{ minHeight:"100vh", background:C.surface, color:C.onSurface, fontFamily:sans, colorScheme: darkMode ? "dark" : "light" }}>
 
       {/* ── BACKGROUND IMAGE + OVERLAY ── */}
       <div style={{
@@ -990,7 +1023,7 @@ export default function JapanItinerary() {
       }} />
       <div style={{
         position:"fixed", top:0, left:0, width:"100%", height:"100%", zIndex:0,
-        backgroundColor:"rgba(249, 249, 249, 0.88)",
+        backgroundColor: darkMode ? "rgba(24,24,24,0.92)" : "rgba(249,249,249,0.88)",
       }} />
 
       {/* ── TOP APP BAR ── */}
@@ -998,16 +1031,22 @@ export default function JapanItinerary() {
         position:"fixed", top:0, left:0, right:0, zIndex:50, height:"64px",
         display:"flex", alignItems:"center", justifyContent:"center",
         padding:"0 24px",
-        background:"rgba(249,249,249,0.85)", backdropFilter:"blur(20px)",
+        background: darkMode ? "rgba(24,24,24,0.88)" : "rgba(249,249,249,0.85)", backdropFilter:"blur(20px)",
         borderBottom:`1px solid ${C.outlineV}33`,
       }}>
         <div style={{ fontFamily:serif, fontSize:"22px", color:C.primary, letterSpacing:"3px" }}>日本</div>
-        <button onClick={handleSignOut} title={user?.email || "Sign out"} style={{
-          position:"absolute", right:"20px",
-          background:"none", border:`1px solid ${C.outlineV}`, borderRadius:"999px",
-          padding:"4px 12px", cursor:"pointer", fontSize:"10px", letterSpacing:"1px",
-          fontFamily:sans, color:C.onSurfaceV, fontWeight:600,
-        }}>Sign out</button>
+        <div style={{ position:"absolute", right:"16px", display:"flex", gap:"8px", alignItems:"center" }}>
+          <button onClick={toggleDark} title={darkMode ? "Light mode" : "Dark mode"} style={{
+            background:"none", border:`1px solid ${C.outlineV}`, borderRadius:"999px",
+            width:"32px", height:"32px", cursor:"pointer", fontSize:"14px",
+            display:"flex", alignItems:"center", justifyContent:"center",
+          }}>{darkMode ? "☀️" : "🌙"}</button>
+          <button onClick={handleSignOut} title={user?.email || "Sign out"} style={{
+            background:"none", border:`1px solid ${C.outlineV}`, borderRadius:"999px",
+            padding:"4px 12px", cursor:"pointer", fontSize:"10px", letterSpacing:"1px",
+            fontFamily:sans, color:C.onSurfaceV, fontWeight:600,
+          }}>Sign out</button>
+        </div>
       </header>
 
       {/* ── MAIN CONTENT ── */}
@@ -1044,7 +1083,7 @@ export default function JapanItinerary() {
               { label:"Budget",   val:`€${Math.round(totalSpent/1000*10)/10}k/${Math.round(totalBudget/1000*10)/10}k`, highlight: false },
             ].map(s => (
               <div key={s.label} style={{
-                background:"rgba(255,255,255,0.6)", backdropFilter:"blur(8px)", WebkitBackdropFilter:"blur(8px)",
+                background: darkMode ? "rgba(30,30,30,0.7)" : "rgba(255,255,255,0.6)", backdropFilter:"blur(8px)", WebkitBackdropFilter:"blur(8px)",
                 padding:"14px 12px", borderRadius:"8px",
                 border:`1px solid ${C.outlineV}15`,
                 display:"flex", flexDirection:"column", alignItems:"center", gap:"4px",
@@ -1318,7 +1357,7 @@ export default function JapanItinerary() {
                                             const rect = itemEl ? itemEl.getBoundingClientRect() : { top: touch.clientY - 20, left: touch.clientX - 100 };
                                             const clone = document.createElement("div");
                                             clone.textContent = item.text;
-                                            clone.style.cssText = `position:fixed;z-index:9999;pointer-events:none;background:#fff;border-radius:6px;padding:10px 14px;box-shadow:0 8px 24px rgba(0,0,0,0.2);font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;color:#1a1c1c;max-width:260px;opacity:0.95;border-left:3px solid ${tc.dot};`;
+                                            clone.style.cssText = `position:fixed;z-index:9999;pointer-events:none;background:${C.surfaceLowest};border-radius:6px;padding:10px 14px;box-shadow:0 8px 24px rgba(0,0,0,0.35);font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;color:${C.onSurface};max-width:260px;opacity:0.95;border-left:3px solid ${tc.dot};`;
                                             clone.style.top  = rect.top  + "px";
                                             clone.style.left = rect.left + "px";
                                             document.body.appendChild(clone);
@@ -2137,7 +2176,7 @@ export default function JapanItinerary() {
       {/* ── BOTTOM NAV ── */}
       <nav style={{
         position:"fixed", bottom:0, left:0, right:0, zIndex:50,
-        background:"rgba(255,255,255,0.95)", backdropFilter:"blur(20px)",
+        background: darkMode ? "rgba(24,24,24,0.95)" : "rgba(255,255,255,0.95)", backdropFilter:"blur(20px)",
         borderTop:`1px solid ${C.outlineV}33`,
         boxShadow:`0 -12px 32px rgba(143,0,32,0.06)`,
         display:"flex", justifyContent:"space-around", alignItems:"center", height:"72px",
