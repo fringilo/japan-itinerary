@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { initializeApp } from "firebase/app";
 import { getDatabase, ref, onValue, set, remove } from "firebase/database";
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, GoogleAuthProvider, signInWithRedirect, getRedirectResult } from "firebase/auth";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 
 // ─── FIREBASE ─────────────────────────────────────────────────────────────────
 const firebaseConfig = {
@@ -382,6 +382,7 @@ export default function JapanItinerary() {
   const countdown = getCountdown();
 
   useEffect(() => {
+    if (!user) return; // wait for auth before reading data
     const bindings = [
       ["jp-items",        setCheckedItems],
       ["jp-tasks",        setCheckedTasks],
@@ -410,14 +411,10 @@ export default function JapanItinerary() {
     });
     const t = setTimeout(() => setSynced(true), 1000);
     return () => { unsubs.forEach(u => u()); customUnsub(); expUnsub(); clearTimeout(t); };
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, u => { setUser(u); setAuthLoading(false); });
-    getRedirectResult(auth).catch(err => {
-      setLoginError(err.message.replace("Firebase: ", "").replace(/ \(auth\/.*\)\.?/, ""));
-      setAuthLoading(false);
-    });
     return unsub;
   }, []);
 
@@ -910,9 +907,14 @@ export default function JapanItinerary() {
       setLoginError(err.message.replace("Firebase: ", "").replace(/ \(auth\/.*\)\.?/, ""));
     }
   };
-  const handleGoogleLogin = () => {
+  const handleGoogleLogin = async () => {
     setLoginError("");
-    signInWithRedirect(auth, googleProvider);
+    try {
+      await signInWithPopup(auth, googleProvider);
+    } catch (err) {
+      console.error("Google login error:", err.code, err.message);
+      setLoginError(`${err.code}: ${err.message}`);
+    }
   };
   const handleSignOut = () => signOut(auth);
 
