@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { initializeApp } from "firebase/app";
 import { getDatabase, ref, onValue, set, remove } from "firebase/database";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 
 // ─── FIREBASE ─────────────────────────────────────────────────────────────────
 const firebaseConfig = {
@@ -13,7 +14,9 @@ const firebaseConfig = {
   appId:         process.env.REACT_APP_FIREBASE_APP_ID,
 };
 const firebaseApp = initializeApp(firebaseConfig);
-const db = getDatabase(firebaseApp);
+const db         = getDatabase(firebaseApp);
+const auth       = getAuth(firebaseApp);
+const googleProvider = new GoogleAuthProvider();
 
 function fbSet(key, val) {
   set(ref(db, `japan2026/${key}`), val).catch(console.error);
@@ -316,6 +319,13 @@ const cities = [
 
 // ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
 export default function JapanItinerary() {
+  const [user,        setUser]           = useState(null);
+  const [authLoading, setAuthLoading]   = useState(true);
+  const [loginEmail,  setLoginEmail]    = useState("");
+  const [loginPass,   setLoginPass]     = useState("");
+  const [loginError,  setLoginError]    = useState("");
+  const [loginMode,   setLoginMode]     = useState("signin"); // "signin" | "signup"
+
   const [activeCity, setActiveCity]     = useState(null);
   const [expandedDays, setExpandedDays] = useState({});
   const [checkedItems, setCheckedItems] = useState({});
@@ -400,6 +410,11 @@ export default function JapanItinerary() {
     });
     const t = setTimeout(() => setSynced(true), 1000);
     return () => { unsubs.forEach(u => u()); customUnsub(); expUnsub(); clearTimeout(t); };
+  }, []);
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, u => { setUser(u); setAuthLoading(false); });
+    return unsub;
   }, []);
 
   useEffect(() => {
@@ -877,6 +892,87 @@ export default function JapanItinerary() {
   const cdColor = countdown > 30 ? "#047857" : countdown > 14 ? "#b45309" : "#8f0020";
   const inTrip  = new Date() >= DEPARTURE && new Date() <= new Date("2026-05-09");
 
+  // ── AUTH HANDLERS ────────────────────────────────────────────────────────────
+  const handleEmailAuth = async (e) => {
+    e.preventDefault();
+    setLoginError("");
+    try {
+      if (loginMode === "signin") {
+        await signInWithEmailAndPassword(auth, loginEmail, loginPass);
+      } else {
+        await createUserWithEmailAndPassword(auth, loginEmail, loginPass);
+      }
+    } catch (err) {
+      setLoginError(err.message.replace("Firebase: ", "").replace(/ \(auth\/.*\)\.?/, ""));
+    }
+  };
+  const handleGoogleLogin = async () => {
+    setLoginError("");
+    try { await signInWithPopup(auth, googleProvider); }
+    catch (err) { setLoginError(err.message.replace("Firebase: ", "").replace(/ \(auth\/.*\)\.?/, "")); }
+  };
+  const handleSignOut = () => signOut(auth);
+
+  // ── AUTH SCREENS ─────────────────────────────────────────────────────────────
+  if (authLoading) return (
+    <div style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", background:C.surface }}>
+      <div style={{ fontFamily:serif, fontSize:"28px", color:C.primary, letterSpacing:"4px" }}>日本</div>
+    </div>
+  );
+
+  if (!user) return (
+    <div style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", background:C.surface, fontFamily:sans }}>
+      <div style={{ width:"100%", maxWidth:"360px", padding:"40px 28px", background:C.surfaceLowest, borderRadius:"16px", border:`1px solid ${C.outlineV}` }}>
+        <div style={{ textAlign:"center", marginBottom:"28px" }}>
+          <div style={{ fontFamily:serif, fontSize:"32px", color:C.primary, letterSpacing:"4px", marginBottom:"6px" }}>日本</div>
+          <div style={{ fontSize:"11px", letterSpacing:"2px", color:C.onSurfaceV, textTransform:"uppercase" }}>Japan 2026 · Private Access</div>
+        </div>
+
+        <button onClick={handleGoogleLogin} style={{
+          width:"100%", padding:"11px", borderRadius:"8px", marginBottom:"16px",
+          border:`1px solid ${C.outlineV}`, background:"#fff", cursor:"pointer",
+          fontSize:"13px", fontWeight:600, fontFamily:sans, color:C.onSurface,
+          display:"flex", alignItems:"center", justifyContent:"center", gap:"10px",
+        }}>
+          <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.964 10.706A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.706V4.962H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.038l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.962L3.964 7.294C4.672 5.163 6.656 3.58 9 3.58z"/></svg>
+          Continue with Google
+        </button>
+
+        <div style={{ display:"flex", alignItems:"center", gap:"10px", marginBottom:"16px" }}>
+          <div style={{ flex:1, height:"1px", background:C.outlineV }} />
+          <span style={{ fontSize:"10px", color:C.onSurfaceV, letterSpacing:"1px" }}>OR</span>
+          <div style={{ flex:1, height:"1px", background:C.outlineV }} />
+        </div>
+
+        <form onSubmit={handleEmailAuth}>
+          <input type="email" placeholder="Email" value={loginEmail} onChange={e => setLoginEmail(e.target.value)} required style={{
+            width:"100%", padding:"10px 12px", borderRadius:"8px", marginBottom:"10px",
+            border:`1px solid ${C.outlineV}`, background:C.surface, fontFamily:sans, fontSize:"13px",
+            color:C.onSurface, outline:"none", boxSizing:"border-box",
+          }} />
+          <input type="password" placeholder="Password" value={loginPass} onChange={e => setLoginPass(e.target.value)} required style={{
+            width:"100%", padding:"10px 12px", borderRadius:"8px", marginBottom:"16px",
+            border:`1px solid ${C.outlineV}`, background:C.surface, fontFamily:sans, fontSize:"13px",
+            color:C.onSurface, outline:"none", boxSizing:"border-box",
+          }} />
+          {loginError && <div style={{ fontSize:"12px", color:C.primary, marginBottom:"12px", lineHeight:1.4 }}>{loginError}</div>}
+          <button type="submit" style={{
+            width:"100%", padding:"11px", borderRadius:"8px", background:C.primary, color:"#fff",
+            border:"none", cursor:"pointer", fontSize:"13px", fontWeight:700, fontFamily:sans, letterSpacing:"1px",
+          }}>{loginMode === "signin" ? "Sign In" : "Create Account"}</button>
+        </form>
+
+        <div style={{ textAlign:"center", marginTop:"14px" }}>
+          <button onClick={() => { setLoginMode(loginMode==="signin"?"signup":"signin"); setLoginError(""); }} style={{
+            background:"none", border:"none", cursor:"pointer", fontSize:"12px", color:C.onSurfaceV, fontFamily:sans,
+          }}>
+            {loginMode === "signin" ? "No account? Create one" : "Already have an account? Sign in"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div style={{ minHeight:"100vh", background:C.surface, color:C.onSurface, fontFamily:sans }}>
 
@@ -900,6 +996,12 @@ export default function JapanItinerary() {
         borderBottom:`1px solid ${C.outlineV}33`,
       }}>
         <div style={{ fontFamily:serif, fontSize:"22px", color:C.primary, letterSpacing:"3px" }}>日本</div>
+        <button onClick={handleSignOut} title={user?.email || "Sign out"} style={{
+          position:"absolute", right:"20px",
+          background:"none", border:`1px solid ${C.outlineV}`, borderRadius:"999px",
+          padding:"4px 12px", cursor:"pointer", fontSize:"10px", letterSpacing:"1px",
+          fontFamily:sans, color:C.onSurfaceV, fontWeight:600,
+        }}>Sign out</button>
       </header>
 
       {/* ── MAIN CONTENT ── */}
