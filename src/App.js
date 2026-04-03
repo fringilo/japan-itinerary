@@ -409,6 +409,9 @@ export default function JapanItinerary() {
   const [editingExp,    setEditingExp]    = useState(null); // { catId, expId }
   const [expEditDraft,  setExpEditDraft]  = useState({ name:"", amount:"", currency:"eur" });
 
+  const [undoAction,  setUndoAction]  = useState(null); // { label, fn }
+  const undoTimerRef  = useRef(null);
+
   const todayRef  = useRef(null);
   const todayIso  = getTodayIso();
   const countdown = getCountdown();
@@ -536,13 +539,39 @@ export default function JapanItinerary() {
     setCustomItems(prev => ({ ...prev, [key]: { ...(prev[key]||{}), [id]: newItem } }));
     setAddingTo(null);
   };
+  const pushUndo = (label, fn) => {
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    setUndoAction({ label, fn });
+    undoTimerRef.current = setTimeout(() => setUndoAction(null), 5000);
+  };
+  const executeUndo = () => {
+    if (undoAction) { undoAction.fn(); }
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    setUndoAction(null);
+  };
+
   const deleteCustomItem = (key, id) => {
+    const item      = (customItems[key] || {})[id];
+    const wasChecked = checkedItems[id];
+    const note      = notes[id];
     fbRemoveItem(key, id);
     setCustomItems(prev => { const d = {...(prev[key]||{})}; delete d[id]; return {...prev,[key]:d}; });
     setCheckedItems(prev => { const n={...prev}; delete n[id]; fbSet("jp-items",n); return n; });
     setNotes(prev => { const n={...prev}; delete n[id]; fbSet("jp-notes",n); return n; });
+    pushUndo(`"${item?.text?.slice(0,28) || "Item"}" deleted`, () => {
+      if (!item) return;
+      fbSetItem(key, id, item);
+      setCustomItems(prev => ({ ...prev, [key]: { ...(prev[key]||{}), [id]: item } }));
+      if (wasChecked) setCheckedItems(prev => { const n={...prev,[id]:true}; fbSet("jp-items",n); return n; });
+      if (note)       setNotes(prev => { const n={...prev,[id]:note}; fbSet("jp-notes",n); return n; });
+    });
   };
-  const hideItem  = (id) => { const n={...hiddenItems,[id]:true}; setHiddenItems(n); fbSet("jp-hidden",n); };
+  const hideItem = (id) => {
+    const n={...hiddenItems,[id]:true}; setHiddenItems(n); fbSet("jp-hidden",n);
+    pushUndo("Item hidden", () => {
+      setHiddenItems(curr => { const r={...curr}; delete r[id]; fbSet("jp-hidden",r); return r; });
+    });
+  };
   const unhideAll = (key, items) => {
     const n={...hiddenItems}; items.forEach(i=>delete n[i.id]);
     setHiddenItems(n); fbSet("jp-hidden",n);
@@ -737,8 +766,13 @@ export default function JapanItinerary() {
     setPackingItems(next); fbSet("jp-packing", next);
   };
   const deletePackingItem = (id) => {
+    const item = packingItems[id];
     const next = { ...packingItems }; delete next[id];
     setPackingItems(next); fbSet("jp-packing", next);
+    pushUndo(`"${item?.text?.slice(0,28) || "Item"}" removed`, () => {
+      if (!item) return;
+      setPackingItems(prev => { const n={...prev,[id]:item}; fbSet("jp-packing",n); return n; });
+    });
   };
   const clearPackingChecks = () => {
     const next = {};
@@ -765,11 +799,21 @@ export default function JapanItinerary() {
     updateSpent(catId, expTotalForCat(catId, catExps).toFixed(2));
   };
   const deleteExpense = (catId, expId) => {
+    const expData = (expenses[catId] || {})[expId];
     const catExps = { ...(expenses[catId] || {}) }; delete catExps[expId];
     setExpenses(prev => ({ ...prev, [catId]: catExps }));
     fbRemoveExpense(catId, expId);
     const newTotal = expTotalForCat(catId, catExps);
     updateSpent(catId, Object.keys(catExps).length > 0 ? newTotal.toFixed(2) : "");
+    pushUndo(`"${expData?.name?.slice(0,28) || "Expense"}" deleted`, () => {
+      if (!expData) return;
+      fbSetExpense(catId, expId, expData);
+      setExpenses(prev => {
+        const updated = { ...prev, [catId]: { ...(prev[catId]||{}), [expId]: expData } };
+        updateSpent(catId, expTotalForCat(catId, updated[catId]).toFixed(2));
+        return updated;
+      });
+    });
   };
   const saveExpense = (catId, expId) => {
     const d = expEditDraft;
@@ -815,7 +859,10 @@ export default function JapanItinerary() {
   };
   const deleteTask = (id) => {
     const customBase = typeof customTasks==='object'&&!Array.isArray(customTasks)?customTasks:{};
-    if (customBase[id]) {
+    const isCustom   = !!customBase[id];
+    const taskData   = customBase[id];
+    const wasChecked = checkedTasks[id];
+    if (isCustom) {
       const next = { ...customBase }; delete next[id];
       setCustomTasks(next); fbSet("jp-custom-tasks", next);
     } else {
@@ -823,6 +870,17 @@ export default function JapanItinerary() {
       setDeletedTaskIds(next); fbSet("jp-deleted-tasks", next);
     }
     setCheckedTasks(prev => { const n={...prev}; delete n[id]; fbSet("jp-tasks",n); return n; });
+    pushUndo("Task deleted", () => {
+      if (isCustom && taskData) {
+        setCustomTasks(prev => {
+          const base = typeof prev==='object'&&!Array.isArray(prev)?prev:{};
+          const next = { ...base, [id]: taskData }; fbSet("jp-custom-tasks", next); return next;
+        });
+      } else {
+        setDeletedTaskIds(prev => { const n={...prev}; delete n[id]; fbSet("jp-deleted-tasks",n); return n; });
+      }
+      if (wasChecked) setCheckedTasks(prev => { const n={...prev,[id]:true}; fbSet("jp-tasks",n); return n; });
+    });
   };
 
   const commitBudgetCat = () => {
@@ -852,13 +910,25 @@ export default function JapanItinerary() {
   };
   const deleteBudgetCat = (id) => {
     const customBase = typeof customBudget==='object'&&!Array.isArray(customBudget)?customBudget:{};
-    if (customBase[id]) {
+    const isCustom   = !!customBase[id];
+    const catData    = customBase[id];
+    if (isCustom) {
       const next = { ...customBase }; delete next[id];
       setCustomBudget(next); fbSet("jp-custom-budget", next);
     } else {
       const next = { ...deletedBudgetIds, [id]: true };
       setDeletedBudgetIds(next); fbSet("jp-deleted-budget", next);
     }
+    pushUndo("Budget category deleted", () => {
+      if (isCustom && catData) {
+        setCustomBudget(prev => {
+          const base = typeof prev==='object'&&!Array.isArray(prev)?prev:{};
+          const next = { ...base, [id]: catData }; fbSet("jp-custom-budget", next); return next;
+        });
+      } else {
+        setDeletedBudgetIds(prev => { const n={...prev}; delete n[id]; fbSet("jp-deleted-budget",n); return n; });
+      }
+    });
   };
 
   // Currency converter handlers
@@ -2172,6 +2242,25 @@ export default function JapanItinerary() {
           );
         })()}
       </main>
+
+      {/* ── UNDO TOAST ── */}
+      {undoAction && (
+        <div style={{
+          position:"fixed", bottom:"84px", left:"50%", transform:"translateX(-50%)",
+          zIndex:200, display:"flex", alignItems:"center", gap:"12px",
+          background: darkMode ? "#2d2d2d" : "#1a1c1c",
+          color:"#f0ece8", borderRadius:"10px", padding:"10px 16px",
+          boxShadow:"0 4px 24px rgba(0,0,0,0.35)", fontFamily:sans, fontSize:"13px",
+          whiteSpace:"nowrap", animation:"fadeInUp 0.2s ease",
+        }}>
+          <span>{undoAction.label}</span>
+          <button onClick={executeUndo} style={{
+            background:C.primary, color:"#fff", border:"none", borderRadius:"6px",
+            padding:"4px 12px", cursor:"pointer", fontSize:"12px", fontWeight:700,
+            fontFamily:sans, letterSpacing:"0.5px",
+          }}>Undo</button>
+        </div>
+      )}
 
       {/* ── BOTTOM NAV ── */}
       <nav style={{
