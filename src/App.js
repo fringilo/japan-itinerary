@@ -1499,8 +1499,8 @@ export default function JapanItinerary() {
                                             {bookingDone[item.id] ? "✓ Booked" : "Needs booking"}
                                           </span>
                                         )}
-                                        {item.booking.note && (
-                                          <span style={{ fontSize:"10px", color:C.onSurfaceV, fontStyle:"italic" }}>— {item.booking.note}</span>
+                                        {item.booking?.note && (
+                                          <span style={{ fontSize:"10px", color:C.onSurfaceV, fontStyle:"italic" }}>— {item.booking?.note}</span>
                                         )}
                                       </div>
                                     )}
