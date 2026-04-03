@@ -597,6 +597,85 @@ export default function JapanItinerary() {
     fbSet("jp-item-order", next);
   };
 
+  const exportItineraryCSV = () => {
+    const rows = [["City","Date","Day","Day Label","#","Type","Description","Map URL","Done"]];
+    cities.forEach(city => {
+      city.days.forEach((day, dIdx) => {
+        const dayKey = `${city.name}-${dIdx}`;
+        const customArr = Object.values(customItems[dayKey] || {});
+        const items = getOrderedDayItems(dayKey, day.items, customArr);
+        items.forEach((item, i) => {
+          const type = typeConfig[item.type]?.label ?? item.type;
+          const done = checkedItems[item.id] ? "Yes" : "No";
+          const text = item.text.replace(/"/g, '""');
+          const mapUrl = item.map || "";
+          rows.push([city.name, day.date, day.day, day.label, i + 1, type, `"${text}"`, mapUrl, done]);
+        });
+      });
+    });
+    const csv = rows.map(r => r.join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = "japan2026-itinerary.csv"; a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportItineraryPDF = () => {
+    const typeDot = { sight:"#3b82f6", food:"#f59e0b", coffee:"#a16207", travel:"#10b981", hotel:"#6366f1", book:"#8f0020" };
+    let html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Japan 2026 Itinerary</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 11px; color: #1a1c1c; padding: 24px 32px; }
+  h1 { font-size: 20px; font-weight: 700; color: #8f0020; margin-bottom: 4px; }
+  .subtitle { font-size: 11px; color: #666; margin-bottom: 24px; }
+  .city { margin-bottom: 28px; page-break-inside: avoid; }
+  .city-header { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px;
+    padding: 5px 10px; border-radius: 4px; margin-bottom: 10px; color: #fff; display: inline-block; }
+  .day { margin-bottom: 14px; }
+  .day-header { font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+    color: #5c403f; margin-bottom: 6px; border-bottom: 1px solid #e4bdbc; padding-bottom: 3px; }
+  .item { display: flex; align-items: flex-start; gap: 7px; padding: 3px 0; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; margin-top: 3px; flex-shrink: 0; }
+  .item-text { flex: 1; line-height: 1.45; }
+  .done { text-decoration: line-through; color: #aaa; }
+  .map-link { font-size: 9px; color: #3b82f6; text-decoration: none; margin-left: 4px; }
+  @media print { body { padding: 12px 20px; } .city { page-break-inside: avoid; } }
+</style></head><body>
+<h1>Japan 2026 — Itinerary</h1>
+<div class="subtitle">Apr 20 – May 9, 2026 · Osaka · Kyoto · Kanazawa · Takayama · Tokyo</div>`;
+
+    cities.forEach(city => {
+      html += `<div class="city">`;
+      html += `<div class="city-header" style="background:${city.color}">${city.name} <span style="font-weight:400;font-size:10px">${city.dates}</span></div>`;
+      city.days.forEach((day, dIdx) => {
+        const dayKey = `${city.name}-${dIdx}`;
+        const customArr = Object.values(customItems[dayKey] || {});
+        const items = getOrderedDayItems(dayKey, day.items, customArr);
+        html += `<div class="day">`;
+        html += `<div class="day-header">${day.date} · ${day.day} — ${day.label}</div>`;
+        items.forEach(item => {
+          const done = checkedItems[item.id];
+          const dot  = typeDot[item.type] || "#999";
+          const text = item.text.replace(/</g,"&lt;").replace(/>/g,"&gt;");
+          const mapTag = item.map ? `<a class="map-link" href="${item.map}">map ↗</a>` : "";
+          html += `<div class="item">
+            <div class="dot" style="background:${dot}"></div>
+            <div class="item-text ${done?"done":""}">${text}${mapTag}</div>
+          </div>`;
+        });
+        html += `</div>`;
+      });
+      html += `</div>`;
+    });
+
+    html += `</body></html>`;
+    const win = window.open("", "_blank");
+    win.document.write(html);
+    win.document.close();
+    win.onload = () => { win.focus(); win.print(); };
+  };
+
   const addPackingItem = () => {
     const text = packingDraft.trim();
     if (!text) return;
@@ -890,8 +969,8 @@ export default function JapanItinerary() {
         {/* ── ITINERARY TAB ── */}
         {activeTab === "itinerary" && (
           <>
-            {/* City filter pills */}
-            <div style={{ display:"flex", gap:"6px", flexWrap:"wrap", marginBottom:"24px" }}>
+            {/* City filter pills + export */}
+            <div style={{ display:"flex", gap:"6px", flexWrap:"wrap", marginBottom:"24px", alignItems:"center" }}>
               {[{name:"ALL", color:C.charcoal}, ...cities].map(c => (
                 <button key={c.name}
                   onClick={() => setActiveCity(c.name==="ALL" ? null : (c.name===activeCity ? null : c.name))}
@@ -904,6 +983,20 @@ export default function JapanItinerary() {
                     transition:"all 0.15s",
                   }}>{c.name==="ALL" ? "ALL" : c.name}</button>
               ))}
+              <div style={{ marginLeft:"auto", display:"flex", gap:"6px" }}>
+                <button onClick={exportItineraryCSV} style={{
+                  padding:"4px 12px", borderRadius:"999px", fontSize:"9px",
+                  letterSpacing:"2px", fontWeight:700, textTransform:"uppercase", cursor:"pointer",
+                  fontFamily:sans, border:`1px solid ${C.outlineV}`, background:"transparent",
+                  color:C.onSurfaceV, transition:"all 0.15s",
+                }}>⬇ CSV</button>
+                <button onClick={exportItineraryPDF} style={{
+                  padding:"4px 12px", borderRadius:"999px", fontSize:"9px",
+                  letterSpacing:"2px", fontWeight:700, textTransform:"uppercase", cursor:"pointer",
+                  fontFamily:sans, border:`1px solid ${C.outlineV}`, background:"transparent",
+                  color:C.onSurfaceV, transition:"all 0.15s",
+                }}>⬇ PDF</button>
+              </div>
             </div>
 
             {filteredCities.map(city => {
