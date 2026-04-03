@@ -93,15 +93,15 @@ const BUDGET_CATEGORIES = [
 
 // ─── PRE-TRIP TASKS ───────────────────────────────────────────────────────────
 const PRE_TRIP_TASKS = [
-  { id:"pt-1",  urgency:"critical", city:"OSAKA",    text:"Book USJ tickets (Studio Pass) via Klook or usj.co.jp — no Express Pass needed, Wizarding World is walkable", url:"https://www.usj.co.jp/web/en/us" },
   { id:"pt-19", urgency:"critical", city:"OSAKA",    text:"Book teamLab Botanical Garden Osaka — evening slot Apr 21 at Nagai Botanical Garden", url:"https://www.teamlab.art/e/botanicalgarden-osaka/" },
   { id:"pt-3",  urgency:"critical", city:"KYOTO",    text:"Book teamLab Biovortex Kyoto — evening slot Apr 25", url:"https://www.teamlab.art/e/kyoto/" },
   { id:"pt-4",  urgency:"critical", city:"TOKYO",    text:"Book Shibuya Sky sunset slot — tickets release ~2 weeks ahead", url:"https://www.shibuya-scramble-square.com/sky/" },
-  { id:"pt-6",  urgency:"high",     city:"KYOTO",    text:"Book Kyoto → Kanazawa train (Thunderbird + Hakutaka, Apr 28)", url:"https://www.westjr.co.jp/global/en/ticket/" },
-  { id:"pt-7",  urgency:"high",     city:"TAKAYAMA", text:"Book Nohi Bus to Shirakawa-go round-trip (Apr 30)", url:"https://www.nouhibus.co.jp/en/" },
-  { id:"pt-8",  urgency:"high",     city:"TAKAYAMA", text:"Book Kanazawa → Takayama train (Hida Ltd Express, Apr 29)", url:"https://www.westjr.co.jp/global/en/ticket/" },
-  { id:"pt-9",  urgency:"high",     city:"TOKYO",    text:"Book teamLab Planets Tokyo (May 7)", url:"https://www.teamlab.art/e/planets/" },
-  { id:"pt-10", urgency:"high",     city:"TOKYO",    text:"Book Takayama → Tokyo train (Hida + Shinkansen, May 1)", url:"https://www.westjr.co.jp/global/en/ticket/" },
+  { id:"pt-9",  urgency:"critical", city:"TOKYO",    text:"Book teamLab Planets Tokyo — 10:00am slot May 7", url:"https://www.teamlab.art/e/planets/" },
+  { id:"pt-21", urgency:"critical", city:"TOKYO",    text:"Book Warner Bros. Studio Tour Tokyo — May 8 morning, with audio guide. Sells out fast!", url:"https://www.wbstudiotour.jp/en/" },
+  { id:"pt-6",  urgency:"low",      city:"KYOTO",    text:"✓ BOOKED — Thunder-Bird 15 departs Kyoto 10:37 → transfer Tsuruga 9 min → Tsurugi 16 → arrive Kanazawa 12:36 (Apr 28)", url:"https://www.westjr.co.jp/global/en/ticket/" },
+  { id:"pt-8",  urgency:"low",      city:"TAKAYAMA", text:"✓ BOOKED — Nohi Bus Kanazawa Sta. West Exit 13:20 → Takayama Nohi Bus Center 15:35 (Apr 29)", url:"https://www.nouhibus.co.jp/en/" },
+  { id:"pt-7",  urgency:"low",      city:"TAKAYAMA", text:"✓ BOOKED — Nohi Bus Shirakawa-go round-trip: Takayama 07:20→08:10 & return 14:00→14:50 (Apr 30)", url:"https://www.nouhibus.co.jp/en/" },
+  { id:"pt-10", urgency:"high",     city:"TOKYO",    text:"Book Takayama → Tokyo: Hida 6 departs 11:35 → Nagoya → Nozomi Shinkansen → Tokyo arr. ~15:54 (May 1). Book Shinkansen on JR Central", url:"https://tickets.jr-central.co.jp/en/" },
   { id:"pt-20", urgency:"high",     city:"TOKYO",    text:"Buy Hakone Free Pass 2-day from Shinjuku (¥7,100pp) — goes on sale ~Apr 5 via Klook or Odakyu EMot", url:"https://odakyu-global.com/passes/hakone-freepass/" },
   { id:"pt-11", urgency:"high",     city:"TOKYO",    text:"Book Romancecar surcharge (¥1,150pp each way) on top of Free Pass — May 5. Book via Odakyu EMot", url:"https://www.odakyu.jp/english/romancecar/" },
   { id:"pt-12", urgency:"medium",   city:"TOKYO",    text:"Book Kawaguchiko highway bus from Busta Shinjuku (May 6)", url:"https://highwaybus.com/gp/index" },
@@ -109,8 +109,9 @@ const PRE_TRIP_TASKS = [
   { id:"pt-14", urgency:"low",      city:"ALL",      text:"Set up Visit Japan Web (immigration pre-registration)", url:"https://vjw-lp.digital.go.jp/en/" },
   { id:"pt-15", urgency:"low",      city:"ALL",      text:"Buy Japan eSIM before departure (~€44 budgeted)" },
   { id:"pt-16", urgency:"low",      city:"ALL",      text:"Set up Suica or PASMO in Apple or Google Wallet" },
-  { id:"pt-17", urgency:"low",      city:"ALL",      text:"Download apps: USJ, Google Maps, Google Translate, teamLab, Klook" },
+  { id:"pt-17", urgency:"low",      city:"ALL",      text:"Download apps: Google Maps, Google Translate, teamLab, Klook, WB Studio Tour" },
   { id:"pt-18", urgency:"low",      city:"ALL",      text:"Notify bank of travel to Japan & China (Shanghai transit)" },
+  { id:"pt-22", urgency:"low",      city:"KYOTO",    text:"Arrange takkyubin luggage forwarding: Hotel Tavinos Kyoto → Hotel Metropolitan Edmont Tokyo. Request delivery May 1. Address: 〒102-0072 東京都千代田区飯田橋3-10-8 ホテルメトロポリタンエドモント" },
 ];
 
 // ─── ITINERARY DATA ───────────────────────────────────────────────────────────
@@ -130,10 +131,14 @@ const cities = [
         { id:"o1-2", type:"sight", text:"Shinsekai district (5:30pm) — retro neon, kushikatsu restaurants, arcades", map:"https://maps.google.com/?cid=3941168473429300987" },
         { id:"o1-3", type:"book",  text:"teamLab Botanical Garden Osaka (evening) — light art installations in Nagai Botanical Garden. BOOK AHEAD", map:"https://www.google.com/maps/search/teamLab+Botanical+Garden+Osaka+Nagai" },
       ]},
-      { date:"Apr 22", day:"Tue", isoDate:"2026-04-22", label:"Universal Studios Japan 🧙", items:[
-        { id:"o2-0", type:"book",  text:"USJ Studio Pass — arrive 8:30am, head straight to Wizarding World. No Express Pass needed — Hogsmeade + Butterbeer + Ollivanders is all walkable", map:"https://maps.google.com/?cid=3892796888607511210" },
-        { id:"o2-2", type:"sight", text:"Super Nintendo World — grab timed entry via USJ app on arrival", map:"https://maps.google.com/?cid=3892796888607511210" },
-        { id:"o2-3", type:"sight", text:"Full park day — leave 7–8pm exhausted and happy" },
+      { date:"Apr 22", day:"Tue", isoDate:"2026-04-22", label:"Nara Day Trip 🦌", items:[
+        { id:"o2-0", type:"travel", text:"Kintetsu Namba → Kintetsu Nara Limited Express (~40 min, ¥720pp). No reservation needed" },
+        { id:"o2-1", type:"sight",  text:"Nara Deer Park (9am) — bow to the deer, they bow back. Shika senbei ¥200. Midweek = far fewer crowds!", map:"https://maps.google.com/?cid=17972930374069941334" },
+        { id:"o2-2", type:"sight",  text:"Tōdai-ji (10am) — Japan's largest Buddha (15m). Squeeze through the wooden pillar for luck!", map:"https://maps.google.com/?cid=17911005107283377295" },
+        { id:"o2-3", type:"sight",  text:"Kasuga Taisha Shrine (11:30am) — forest lantern path, late April wisteria possible", map:"https://maps.google.com/?cid=5519134420388517270" },
+        { id:"o2-4", type:"food",   text:"Lunch in Nara — try kakinoha-zushi (persimmon leaf sushi, local Nara specialty)", map:"https://www.google.com/maps/search/kakinoha+zushi+Nara" },
+        { id:"o2-5", type:"travel", text:"Return Kintetsu Nara → Namba (~40 min)" },
+        { id:"o2-6", type:"sight",  text:"Free afternoon in Osaka — Dotonbori stroll, Amerika Mura, or rest before tomorrow's teamLab", map:"https://maps.google.com/?cid=16446419638008461065" },
       ]},
       { date:"Apr 23", day:"Wed", isoDate:"2026-04-23", label:"Himeji Castle + Kobe 🏯", items:[
         { id:"o3-0", type:"travel", text:"JR Shinkaisoku from Osaka → Himeji (~60 min). No reservation needed" },
@@ -167,12 +172,13 @@ const cities = [
         { id:"k1-2", type:"coffee", text:"Stumptown Coffee Roasters or Slō — afternoon recharge", map:"https://www.google.com/maps/place/Stumptown+Coffee+Roasters/data=!4m2!3m1!1s0x600109de38f945a9:0x54013b28b688b161" },
         { id:"k1-3", type:"book",   text:"teamLab Biovortex Kyoto (6–7pm slot) — 50+ installations, 2.5 hrs. BOOK NOW", map:"https://maps.google.com/?cid=755170767874408507" },
       ]},
-      { date:"Apr 26", day:"Sat", isoDate:"2026-04-26", label:"Nara Day Trip 🦌", items:[
-        { id:"k2-0", type:"travel", text:"Kintetsu Limited Express: Kyoto → Nara (45 min)" },
-        { id:"k2-1", type:"sight",  text:"Nara Deer Park (9am) — bow to the deer, they bow back. Shika senbei ¥200", map:"https://maps.google.com/?cid=17972930374069941334" },
-        { id:"k2-2", type:"sight",  text:"Tōdai-ji (10am) — Japan's largest Buddha (15m). Squeeze through the pillar for luck!", map:"https://maps.google.com/?cid=17911005107283377295" },
-        { id:"k2-3", type:"sight",  text:"Kasuga Taisha Shrine (11:30am) — forest lantern path, late April wisteria possible", map:"https://maps.google.com/?cid=5519134420388517270" },
-        { id:"k2-4", type:"coffee", text:"nadoya no katte or Le Labo Kyoto Machiya on return", map:"https://www.google.com/maps/place/nadoya+no+katte/data=!4m2!3m1!1s0x6018f36fd56d2b7f:0x98ffe56e834f133e" },
+      { date:"Apr 26", day:"Sat", isoDate:"2026-04-26", label:"Kyoto Free Day — Nijojo + Nishiki 🏯", items:[
+        { id:"k2-0", type:"sight",  text:"Nijojo Castle (9am) — Tokugawa shogun palace, famous nightingale floors, stunning gardens. ¥1,300pp. Go early on Saturday!", map:"https://maps.google.com/?cid=4980455634015699495" },
+        { id:"k2-1", type:"food",   text:"Nishiki Market (11am) — Kyoto's kitchen, covered street. Try tofu skewers, pickled veg, matcha, fresh yuba", map:"https://www.google.com/maps/search/Nishiki+Market+Kyoto" },
+        { id:"k2-2", type:"coffee", text:"Café Bibliotic Hello! — charming bookshop café in a converted machiya townhouse near Nishiki", map:"https://www.google.com/maps/search/Cafe+Bibliotic+Hello+Kyoto" },
+        { id:"k2-3", type:"sight",  text:"Philosopher's Path (2pm) — 2km canal walk through residential Kyoto, peaceful even on weekends in the afternoon", map:"https://www.google.com/maps/search/Philosopher's+Path+Kyoto" },
+        { id:"k2-4", type:"sight",  text:"Nanzenji Temple (3pm) — stunning red brick aqueduct, free grounds, optional inner garden ¥600", map:"https://www.google.com/maps/search/Nanzenji+Temple+Kyoto" },
+        { id:"k2-5", type:"coffee", text:"Slow evening — neighbourhood coffee near Nanzenji or back in Gion", map:"https://www.google.com/maps/search/specialty+coffee+Nanzenji+Kyoto" },
       ]},
       { date:"Apr 27", day:"Sun", isoDate:"2026-04-27", label:"Kinkakuji + Arashiyama by Bike 🚲", items:[
         { id:"k3-0", type:"sight",  text:"Kinkakuji Golden Pavilion (9am) — arrive at opening, gold reflected in the pond", map:"https://maps.google.com/?cid=1073025677330113631" },
@@ -186,8 +192,8 @@ const cities = [
       ]},
       { date:"Apr 28", day:"Mon", isoDate:"2026-04-28", label:"Kiyomizudera → Kanazawa", items:[
         { id:"k4-0", type:"sight",  text:"Kiyomizudera (6:00am!) — sunrise wooden stage, mist over Kyoto. Back by 8:30am", map:"https://maps.google.com/?cid=7111013964196361402" },
-        { id:"k4-1", type:"hotel",  text:"Pack & checkout · Head to Kyoto Station by 11am" },
-        { id:"k4-2", type:"book",   text:"Thunderbird → Hakutaka to Kanazawa (~2.5 hrs) · Book by Mar 29, Golden Week -1 day!" },
+        { id:"k4-1", type:"hotel",  text:"Pack & checkout · Arrange takkyubin for suitcase → Tokyo · Head to Kyoto Station by 10:00am" },
+        { id:"k4-2", type:"travel", text:"✓ BOOKED — Thunder-Bird 15 departs Kyoto 10:37 → transfer Tsuruga 9 min → Tsurugi 16 → arrive Kanazawa 12:36. Collect tickets at JR machine with email + PIN" },
       ]},
     ]
   },
@@ -206,7 +212,7 @@ const cities = [
       { date:"Apr 29", day:"Tue", isoDate:"2026-04-29", label:"Morning → Takayama", items:[
         { id:"kz1-0", type:"sight",  text:"Nagamachi Samurai District (8:30am) — Nomura-ke mansion garden ¥550. Go early!", map:"https://maps.google.com/?cid=11384741629417725499" },
         { id:"kz1-1", type:"sight",  text:"21st Century Museum of Contemporary Art (10am) — 'Swimming Pool' installation", map:"https://maps.google.com/?cid=5848489108542154945" },
-        { id:"kz1-2", type:"book",   text:"Kanazawa → Toyama → Takayama (Hida Ltd Express) · Golden Week Day 1 — book now!" },
+        { id:"kz1-2", type:"travel", text:"✓ BOOKED — Nohi Bus: Kanazawa Sta. West Exit No.4 departs 13:20 → arrive Takayama Nohi Bus Center 15:35. Direct, scenic, no transfer" },
       ]},
     ]
   },
@@ -221,17 +227,19 @@ const cities = [
         { id:"t0-3", type:"sight",  text:"Miyagawa riverside walk (5:30pm) — scope out tomorrow's morning market", map:"https://maps.google.com/?cid=5487124927485698262" },
       ]},
       { date:"Apr 30", day:"Wed", isoDate:"2026-04-30", label:"Shirakawa-go + Village Walk 🏔", items:[
-        { id:"t1-0", type:"food",   text:"Miyagawa Morning Market (7:00am) — riverside stalls, local coffee, handmade crafts", map:"https://maps.google.com/?cid=5487124927485698262" },
-        { id:"t1-1", type:"book",   text:"Nohi Bus → Shirakawa-go (depart 8:30am) · UNESCO Heritage · BOOK — Golden Week!" },
+        { id:"t1-0", type:"food",   text:"Miyagawa Morning Market (6:45am) — quick breakfast before bus. Grab something to go!", map:"https://maps.google.com/?cid=5487124927485698262" },
+        { id:"t1-1", type:"travel", text:"✓ BOOKED — Nohi Bus departs Takayama 07:20 → arrive Shirakawa-go (Ogimachi) 08:10" },
         { id:"t1-2", type:"sight",  text:"Shirakawa-go — thatched gassho-zukuri farmhouses. Hike to Shiroyama Hill viewpoint!", map:"https://maps.google.com/?cid=14755289620389823992" },
-        { id:"t1-3", type:"travel", text:"Return bus ~1:30pm" },
+        { id:"t1-6", type:"food",   text:"Lunch in Shirakawa-go — try Hida beef or soba before the return bus", map:"https://www.google.com/maps/search/restaurant+Shirakawa-go" },
+        { id:"t1-3", type:"travel", text:"✓ BOOKED — Return bus: Shirakawa-go departs 14:00 → arrive Takayama 14:50" },
         { id:"t1-4", type:"sight",  text:"Higashiyama Promenade (3pm) — 3.5km free walk through 12 temples & shrines", map:"https://maps.google.com/?cid=18177616014009134586" },
         { id:"t1-5", type:"sight",  text:"Hida Folk Village Museum (4:45pm) — open-air gassho farmhouses, very peaceful", map:"https://maps.google.com/?cid=15466683148941065284" },
       ]},
-      { date:"May 1", day:"Thu", isoDate:"2026-05-01", label:"Morning Market → Tokyo 🚅", items:[
-        { id:"t2-0", type:"food",   text:"Miyagawa Morning Market (7am) — riverside breakfast, final Takayama morning", map:"https://maps.google.com/?cid=5487124927485698262" },
+      { date:"May 1", day:"Thu", isoDate:"2026-05-01", label:"Slow Morning → Tokyo 🚅", items:[
+        { id:"t2-0", type:"food",   text:"Miyagawa Morning Market (7am) — riverside breakfast, final Takayama morning. No rush today!", map:"https://maps.google.com/?cid=5487124927485698262" },
         { id:"t2-1", type:"sight",  text:"Takayama Jinya (8:45am) — Japan's only surviving Edo govt. building, ¥440, 45 min", map:"https://maps.google.com/?cid=11021987317374357985" },
-        { id:"t2-2", type:"book",   text:"Hida Ltd Express → Nagoya → Shinkansen to Tokyo · Book now — Golden Week!" },
+        { id:"t2-3", type:"food",   text:"Final Hida beef croquette or coffee stroll through Sanmachi Suji before checkout", map:"https://maps.google.com/?cid=9208866768243964046" },
+        { id:"t2-2", type:"travel", text:"Hida 6 departs Takayama 11:35 → Nagoya (arr. ~14:04) → Nozomi Shinkansen → Tokyo (arr. ~15:54). Book Shinkansen on JR Central — ordinary car + oversized baggage seat" },
       ]},
     ]
   },
@@ -285,19 +293,20 @@ const cities = [
         { id:"tk5-4", type:"travel", text:"Return bus ~3–4pm" },
       ]},
       { date:"May 7", day:"Wed", isoDate:"2026-05-07", label:"teamLab Planets + Odaiba 🌊", items:[
-        { id:"tk6-0", type:"book",   text:"teamLab Planets Tokyo (10am) — barefoot water rooms, very different from Biovortex. BOOK NOW", map:"https://maps.google.com/?cid=7918542870314997282" },
+        { id:"tk6-0", type:"book",   text:"teamLab Planets Tokyo (10:00am slot) — barefoot water rooms, completely different from Biovortex. ~1.5 hrs. Tokyo Metro Yurakucho Line from Iidabashi → Toyosu direct, ~20 min. BOOK NOW", map:"https://maps.google.com/?cid=7918542870314997282" },
         { id:"tk6-1", type:"travel", text:"Yurikamome monorail → Odaiba (the ride itself is spectacular)" },
         { id:"tk6-2", type:"sight",  text:"Odaiba Seaside Park — Statue of Liberty, Rainbow Bridge, Tokyo skyline", map:"https://maps.google.com/?cid=9066800158489327401" },
         { id:"tk6-3", type:"food",   text:"Lunch: DiverCity or Decks mall ramen/sushi options", map:"https://www.google.com/maps/search/DiverCity+Tokyo+Plaza" },
       ]},
-      { date:"May 8", day:"Thu", isoDate:"2026-05-08", label:"Ginza + Final Evening 🌆", items:[
-        { id:"tk7-0", type:"food",   text:"Tsukiji Outer Market (8am) — one last seafood breakfast. Try sea urchin or a toro bowl!", map:"https://maps.google.com/?cid=11704332758705177180" },
-        { id:"tk7-1", type:"coffee", text:"Glitch Coffee & Roasters GINZA — arrive 30 min before open ⭐ Worth the wait", map:"https://www.google.com/maps/place/Glitch+Coffee+and+Roasters+GINZA/data=!4m2!3m1!1s0x60188bfa45634c13:0x6abbdc48213cb890" },
-        { id:"tk7-2", type:"sight",  text:"Ginza — Ginza Six food hall, flagship stores, gallery hopping", map:"https://www.google.com/maps/search/Ginza+Six+Tokyo" },
-        { id:"tk7-3", type:"book",   text:"Special farewell dinner — tasting menu or Sukiyabashi Jiro area. BOOK AHEAD!", map:"https://www.google.com/maps/search/fine+dining+Ginza+Tokyo" },
+      { date:"May 8", day:"Thu", isoDate:"2026-05-08", label:"Warner Bros. Studio Tour + Ginza 🎬", items:[
+        { id:"tk7-0", type:"book",   text:"Warner Bros. Studio Tour Tokyo — The Making of Harry Potter (10am). Great Hall, Diagon Alley, Forbidden Forest, actual film props & costumes. ~3–4 hrs. Audio guide strongly recommended. BOOK NOW at wbstudiotour.jp", map:"https://www.google.com/maps/search/Warner+Bros+Studio+Tour+Tokyo+Toshimaen" },
+        { id:"tk7-1", type:"travel", text:"Train from Toshimaen → central Tokyo (~30 min via Seibu Ikebukuro or Oedo Line)" },
+        { id:"tk7-2", type:"coffee", text:"Glitch Coffee & Roasters GINZA — arrive 30 min before open ⭐ Worth the wait", map:"https://www.google.com/maps/place/Glitch+Coffee+and+Roasters+GINZA/data=!4m2!3m1!1s0x60188bfa45634c13:0x6abbdc48213cb890" },
+        { id:"tk7-3", type:"sight",  text:"Ginza — Ginza Six food hall, flagship stores, gallery hopping", map:"https://www.google.com/maps/search/Ginza+Six+Tokyo" },
+        { id:"tk7-4", type:"book",   text:"Farewell dinner — tasting menu or omakase in Ginza. BOOK AHEAD!", map:"https://www.google.com/maps/search/fine+dining+Ginza+Tokyo" },
       ]},
       { date:"May 9", day:"Fri", isoDate:"2026-05-09", label:"Departure ✈️", items:[
-        { id:"tk8-0", type:"travel", text:"Narita Express from Tokyo Station → Narita Airport (~60 min). Allow 3 hrs at airport!" },
+        { id:"tk8-0", type:"travel", text:"N'EX Narita Express from Tokyo Station → Narita (~60 min, ¥3,070pp). Take JR Chuo-Sobu from Iidabashi → Tokyo Station (2 stops, 5 min). Allow 3 hrs at airport!" },
         { id:"tk8-1", type:"travel", text:"Tokyo Narita → Shanghai Pudong → Budapest (China Eastern)" },
         { id:"tk8-2", type:"coffee", text:"Last Japanese coffee at the airport — take your Koffee Mameya beans home!" },
       ]},
