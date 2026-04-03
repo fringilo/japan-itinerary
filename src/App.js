@@ -375,8 +375,9 @@ export default function JapanItinerary() {
   const [deletedBudgetIds,setDeletedBudgetIds] = useState({});
   const [openNotes,   setOpenNotes]     = useState({});
   const [openActions, setOpenActions]   = useState({});
+  const [bookingDone, setBookingDone]   = useState({});
   const [addingTo,    setAddingTo]      = useState(null);
-  const [draft,       setDraft]         = useState({ text:"", type:"sight", map:"" });
+  const [draft,       setDraft]         = useState({ text:"", type:"sight", map:"", bookingUrl:"", bookingNote:"" });
   const [addingTask,  setAddingTask]    = useState(false);
   const [taskDraft,   setTaskDraft]     = useState({ text:"", urgency:"medium", city:"ALL", url:"" });
   const [editingTask, setEditingTask]   = useState(null); // id of task being edited
@@ -433,6 +434,7 @@ export default function JapanItinerary() {
       ["jp-deleted-budget",  setDeletedBudgetIds],
       ["jp-item-overrides",  setItemOverrides],
       ["jp-item-order",      setItemOrder],
+      ["jp-booking-done",    setBookingDone],
       ["jp-packing",         setPackingItems],
     ];
     const unsubs = bindings.map(([key, setter]) =>
@@ -528,16 +530,24 @@ export default function JapanItinerary() {
   const toggleDay  = (key) => setExpandedDays(prev => ({ ...prev, [key]: prev[key] === false ? true : false }));
   const saveNote   = (id, val) => { const n = {...notes,[id]:val}; setNotes(n); fbSet("jp-notes",n); };
 
-  const openAddForm = (key) => { setDraft({ text:"", type:"sight", map:"" }); setAddingTo(key); };
+  const openAddForm = (key) => { setDraft({ text:"", type:"sight", map:"", bookingUrl:"", bookingNote:"" }); setAddingTo(key); };
   const cancelAdd   = () => setAddingTo(null);
   const commitAdd   = (key) => {
     if (!draft.text.trim()) return;
     const id = `custom-${Date.now()}`;
     const newItem = { id, type:draft.type, text:draft.text.trim(), custom:true };
     if (draft.map.trim()) newItem.map = draft.map.trim();
+    if (draft.bookingUrl.trim()) {
+      newItem.booking = { url: draft.bookingUrl.trim() };
+      if (draft.bookingNote.trim()) newItem.booking.note = draft.bookingNote.trim();
+    }
     fbSetItem(key, id, newItem);
     setCustomItems(prev => ({ ...prev, [key]: { ...(prev[key]||{}), [id]: newItem } }));
     setAddingTo(null);
+  };
+  const toggleBookingDone = (id) => {
+    const next = { ...bookingDone, [id]: !bookingDone[id] };
+    setBookingDone(next); fbSet("jp-booking-done", next);
   };
   const pushUndo = (label, fn) => {
     if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
@@ -1400,8 +1410,11 @@ export default function JapanItinerary() {
                                       </div>
                                       {/* Action toggle + map pin */}
                                       <div style={{ flexShrink:0, paddingTop:"2px", display:"flex", gap:"4px", alignItems:"center" }}>
-                                        {item.type==="book" && !done && (
+                                        {(item.type==="book" || (item.booking?.url && !bookingDone[item.id])) && !done && (
                                           <span style={{ fontSize:"7px", color:C.primary, background:`${C.primary}10`, padding:"2px 5px", borderRadius:"2px", letterSpacing:"1px", fontWeight:700 }}>BOOK</span>
+                                        )}
+                                        {item.booking?.url && bookingDone[item.id] && (
+                                          <span style={{ fontSize:"7px", color:"#047857", background:"rgba(4,120,87,0.1)", padding:"2px 5px", borderRadius:"2px", letterSpacing:"1px", fontWeight:700 }}>✓ BOOKED</span>
                                         )}
                                         {noteVal && !openActions[item.id] && (
                                           <span style={{ fontSize:"9px", opacity:0.5 }}>📝</span>
@@ -1454,6 +1467,35 @@ export default function JapanItinerary() {
                                         >{openActions[item.id] ? "✕" : "✎"}</span>
                                       </div>
                                     </div>
+
+                                    {/* Booking indicator */}
+                                    {item.booking?.url && (
+                                      <div style={{ marginTop:"7px", display:"flex", alignItems:"center", gap:"8px" }}>
+                                        <span
+                                          onClick={e => { e.stopPropagation(); toggleBookingDone(item.id); }}
+                                          style={{
+                                            width:"15px", height:"15px", borderRadius:"3px", flexShrink:0,
+                                            border:`1.5px solid ${bookingDone[item.id] ? "#047857" : C.primary}`,
+                                            background: bookingDone[item.id] ? "#047857" : "transparent",
+                                            display:"inline-flex", alignItems:"center", justifyContent:"center",
+                                            cursor:"pointer", transition:"all 0.15s",
+                                          }}>
+                                          {bookingDone[item.id] && <span style={{ color:"#fff", fontSize:"9px", lineHeight:1 }}>✓</span>}
+                                        </span>
+                                        <a href={item.booking.url} target="_blank" rel="noopener noreferrer"
+                                          onClick={e => e.stopPropagation()}
+                                          style={{
+                                            fontSize:"10px", fontWeight:700, letterSpacing:"1px",
+                                            textTransform:"uppercase", textDecoration:"none",
+                                            color: bookingDone[item.id] ? "#047857" : C.primary,
+                                          }}>
+                                          {bookingDone[item.id] ? "✓ Booked" : "⚡ Book now"}
+                                        </a>
+                                        {item.booking.note && (
+                                          <span style={{ fontSize:"10px", color:C.onSurfaceV, fontStyle:"italic" }}>— {item.booking.note}</span>
+                                        )}
+                                      </div>
+                                    )}
 
                                     {/* Expanded action tray */}
                                     {openActions[item.id] && (
@@ -1604,6 +1646,46 @@ export default function JapanItinerary() {
                                     padding:"4px 0", color:C.onSurfaceV, fontSize:"11px",
                                     fontFamily:sans, outline:"none",
                                   }} />
+                                {/* Booking section */}
+                                <div style={{ borderTop:`1px solid ${C.outlineV}44`, paddingTop:"8px", marginBottom:"10px" }}>
+                                  <button onClick={() => setDraft(p=>({...p, bookingUrl: p.bookingUrl==="" && !p._bookingOpen ? " " : "", bookingNote:"", _bookingOpen:!p._bookingOpen}))}
+                                    style={{
+                                      background: draft._bookingOpen ? `${C.primary}15` : "transparent",
+                                      border:`1px solid ${draft._bookingOpen ? C.primary : C.outlineV}`,
+                                      borderRadius:"999px", padding:"3px 10px", cursor:"pointer",
+                                      fontSize:"9px", fontWeight:700, letterSpacing:"1px",
+                                      textTransform:"uppercase", fontFamily:sans,
+                                      color: draft._bookingOpen ? C.primary : C.onSurfaceV,
+                                    }}>
+                                    {draft._bookingOpen ? "✕ Remove booking" : "+ Add booking"}
+                                  </button>
+                                  {draft._bookingOpen && (
+                                    <div style={{ marginTop:"8px", display:"flex", flexDirection:"column", gap:"6px" }}>
+                                      <input type="text"
+                                        placeholder="Booking URL (Klook, official site…)"
+                                        value={draft.bookingUrl.trim() === "" ? "" : draft.bookingUrl}
+                                        onChange={e => setDraft(p=>({...p, bookingUrl:e.target.value}))}
+                                        style={{
+                                          width:"100%", boxSizing:"border-box",
+                                          background:"transparent", border:"none",
+                                          borderBottom:`1px solid ${C.primary}66`,
+                                          padding:"4px 0", color:C.onSurface, fontSize:"11px",
+                                          fontFamily:sans, outline:"none",
+                                        }} />
+                                      <input type="text"
+                                        placeholder="Note (optional) — e.g. Book 2 weeks ahead"
+                                        value={draft.bookingNote}
+                                        onChange={e => setDraft(p=>({...p, bookingNote:e.target.value}))}
+                                        style={{
+                                          width:"100%", boxSizing:"border-box",
+                                          background:"transparent", border:"none",
+                                          borderBottom:`1px solid ${C.outlineV}`,
+                                          padding:"4px 0", color:C.onSurfaceV, fontSize:"11px",
+                                          fontFamily:sans, outline:"none",
+                                        }} />
+                                    </div>
+                                  )}
+                                </div>
                                 <div style={{ display:"flex", gap:"8px", justifyContent:"flex-end" }}>
                                   <button onClick={cancelAdd} style={{
                                     padding:"5px 14px", borderRadius:"2px", fontSize:"10px", cursor:"pointer",
