@@ -591,7 +591,7 @@ export default function JapanItinerary() {
     });
   };
   const unhideAll = (key, items) => {
-    const n={...hiddenItems}; items.forEach(i=>delete n[i.id]);
+    const n={...hiddenItems}; items.forEach(i=>{ if(n[i.id]===true) delete n[i.id]; });
     setHiddenItems(n); fbSet("jp-hidden",n);
   };
   // Edit any itinerary item (custom or hardcoded)
@@ -656,24 +656,39 @@ export default function JapanItinerary() {
 
   // Move item to a different day via drag-and-drop
   const moveItemToDay = (fromDayKey, toDayKey, fromId, toIndex, item) => {
-    // Hide original item in source day
-    const newHidden = { ...hiddenItems, [fromId]: true };
+    // Mark original as "moved" (not just hidden) — excluded from "restore hidden" UI
+    const newHidden = { ...hiddenItems, [fromId]: "moved" };
     setHiddenItems(newHidden);
     fbSet("jp-hidden", newHidden);
 
-    // Create new custom item in target day
+    // If original was a custom item, remove it from Firebase entirely
+    const srcCustom = customItems[fromDayKey] || {};
+    if (srcCustom[fromId]) {
+      fbRemoveItem(fromDayKey, fromId);
+      const updated = { ...srcCustom }; delete updated[fromId];
+      setCustomItems(prev => ({ ...prev, [fromDayKey]: updated }));
+    }
+
+    // Create new custom item in target day (copy all relevant fields)
     const newId = `moved-${Date.now()}`;
     const newItem = { id: newId, type: item.type, text: item.text, custom: true };
-    if (item.map) newItem.map = item.map;
+    if (item.map)     newItem.map     = item.map;
+    if (item.booking) newItem.booking = item.booking;
+    if (item.needsBooking) newItem.needsBooking = true;
     fbSetItem(toDayKey, newId, newItem);
     const updatedCustom = { ...customItems, [toDayKey]: { ...(customItems[toDayKey] || {}), [newId]: newItem } };
     setCustomItems(updatedCustom);
 
-    // Copy checked state to new item
+    // Copy checked + booking state to new item
     if (checkedItems[fromId]) {
       const newChecked = { ...checkedItems, [newId]: true };
       setCheckedItems(newChecked);
       fbSet("jp-items", newChecked);
+    }
+    if (bookingDone[fromId]) {
+      const newBooking = { ...bookingDone, [newId]: true };
+      setBookingDone(newBooking);
+      fbSet("jp-booking-done", newBooking);
     }
 
     // Find target day base items
@@ -1657,13 +1672,13 @@ export default function JapanItinerary() {
                               }); const finalDropShown = dragOverTarget?.dayKey === key && dragOverTarget?.index === itemCount; return [...itemNodes, finalDropShown ? <div key="__drop-end" style={{ height:"2px", background:city.color, borderRadius:"2px", margin:"2px 0 4px -24px", opacity:0.75 }} /> : null]; })()}
 
                               {/* Restore hidden */}
-                              {d.items.some(i => hiddenItems[i.id]) && (
+                              {d.items.some(i => hiddenItems[i.id] === true) && (
                                 <div onClick={() => unhideAll(key, d.items)} style={{
                                   fontSize:"10px", color:C.outline, cursor:"pointer", padding:"4px 0", letterSpacing:"1px",
                                 }}
                                 onMouseEnter={e => e.currentTarget.style.color=C.onSurface}
                                 onMouseLeave={e => e.currentTarget.style.color=C.outline}
-                                >↩ restore {d.items.filter(i=>hiddenItems[i.id]).length} hidden item(s)</div>
+                                >↩ restore {d.items.filter(i=>hiddenItems[i.id]===true).length} hidden item(s)</div>
                               )}
                             </div>
 
