@@ -377,7 +377,9 @@ export default function JapanItinerary() {
   const [deletedBudgetIds,setDeletedBudgetIds] = useState({});
   const [openNotes,   setOpenNotes]     = useState({});
   const [openActions, setOpenActions]   = useState({});
-  const [bookingDone, setBookingDone]   = useState({});
+  const [bookingDone,  setBookingDone]  = useState({});
+  const [searchOpen,   setSearchOpen]  = useState(false);
+  const [searchQuery,  setSearchQuery] = useState("");
   const [addingTo,    setAddingTo]      = useState(null);
   const [draft,       setDraft]         = useState({ text:"", type:"sight", map:"", bookingUrl:"", bookingNote:"" });
   const [addingTask,  setAddingTask]    = useState(false);
@@ -1008,6 +1010,53 @@ export default function JapanItinerary() {
     else moveItemToDay(fromDayKey, toDayKey, fromId, dropIdx, dragData);
   };
 
+  // ── SEARCH ───────────────────────────────────────────────────────────────────
+  const searchResults = (() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return [];
+    const results = [];
+    cities.forEach(city => {
+      city.days.forEach((day, dIdx) => {
+        const dayKey = `${city.name}-${dIdx}`;
+        const customArr = Object.values(customItems[dayKey] || {});
+        getOrderedDayItems(dayKey, day.items, customArr).forEach(item => {
+          if (item.text.toLowerCase().includes(q))
+            results.push({ section:"itinerary", item, city, day, dayKey });
+        });
+      });
+    });
+    allTasks.forEach(task => {
+      if (task.text.toLowerCase().includes(q))
+        results.push({ section:"tasks", task });
+    });
+    Object.values(packingItems).forEach(item => {
+      if (item.text?.toLowerCase().includes(q))
+        results.push({ section:"packing", item });
+    });
+    return results;
+  })();
+
+  const highlight = (text, q) => {
+    if (!q.trim()) return text;
+    const idx = text.toLowerCase().indexOf(q.toLowerCase());
+    if (idx === -1) return text;
+    return <>{text.slice(0,idx)}<mark style={{ background:`${C.primary}28`, color:C.primary, borderRadius:"2px", padding:"0 1px", fontWeight:700 }}>{text.slice(idx, idx+q.length)}</mark>{text.slice(idx+q.length)}</>;
+  };
+
+  const navigateToResult = (result) => {
+    setSearchOpen(false); setSearchQuery("");
+    if (result.section === "itinerary") {
+      setActiveTab("itinerary");
+      setActiveCity(result.city.name);
+      setExpandedDays(prev => ({ ...prev, [result.dayKey]: true }));
+      setTimeout(() => document.getElementById(`item-${result.item.id}`)?.scrollIntoView({ behavior:"smooth", block:"center" }), 300);
+    } else if (result.section === "tasks") {
+      setActiveTab("tasks");
+    } else if (result.section === "packing") {
+      setActiveTab("packing");
+    }
+  };
+
   const cdColor = countdown > 30 ? "#047857" : countdown > 14 ? "#b45309" : "#8f0020";
   const inTrip  = new Date() >= DEPARTURE && new Date() <= new Date("2026-05-09");
 
@@ -1122,6 +1171,11 @@ export default function JapanItinerary() {
       }}>
         <div style={{ fontFamily:serif, fontSize:"22px", color:C.primary, letterSpacing:"3px" }}>日本</div>
         <div style={{ position:"absolute", right:"16px", display:"flex", gap:"8px", alignItems:"center" }}>
+          <button onClick={() => setSearchOpen(true)} title="Search" style={{
+            background:"none", border:`1px solid ${C.outlineV}`, borderRadius:"999px",
+            width:"32px", height:"32px", cursor:"pointer", fontSize:"14px",
+            display:"flex", alignItems:"center", justifyContent:"center",
+          }}>🔍</button>
           <button onClick={toggleDark} title={darkMode ? "Light mode" : "Dark mode"} style={{
             background:"none", border:`1px solid ${C.outlineV}`, borderRadius:"999px",
             width:"32px", height:"32px", cursor:"pointer", fontSize:"14px",
@@ -1316,6 +1370,7 @@ export default function JapanItinerary() {
                                   <div key={item.id}>
                                     {isDragOver && <div style={{ height:"2px", background:city.color, borderRadius:"2px", margin:"2px 0 4px -24px", opacity:0.75 }} />}
                                     <div
+                                      id={`item-${item.id}`}
                                       data-d-item={item.id}
                                       data-d-day={key}
                                       data-d-idx={ii}
@@ -1905,7 +1960,7 @@ export default function JapanItinerary() {
                               <a href={bookUrl} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ fontSize:"10px", color:C.outline, textDecoration:"none" }}>→ open link</a>
                             )}
                             {item.booking?.note && (
-                              <span style={{ fontSize:"10px", color:C.onSurfaceV, fontStyle:"italic" }}>{item.booking.note}</span>
+                              <span style={{ fontSize:"10px", color:C.onSurfaceV, fontStyle:"italic" }}>{item.booking?.note}</span>
                             )}
                           </div>
                         </div>
@@ -2394,6 +2449,91 @@ export default function JapanItinerary() {
           );
         })()}
       </main>
+
+      {/* ── SEARCH OVERLAY ── */}
+      {searchOpen && (
+        <div onClick={() => { setSearchOpen(false); setSearchQuery(""); }} style={{
+          position:"fixed", inset:0, zIndex:400,
+          background: darkMode ? "rgba(0,0,0,0.75)" : "rgba(0,0,0,0.45)",
+          backdropFilter:"blur(6px)", WebkitBackdropFilter:"blur(6px)",
+          display:"flex", flexDirection:"column", alignItems:"center",
+          paddingTop:"80px", boxSizing:"border-box",
+        }}>
+          <div onClick={e => e.stopPropagation()} style={{
+            width:"calc(100% - 32px)", maxWidth:"640px",
+            background:C.surfaceLowest, borderRadius:"12px",
+            boxShadow:"0 24px 64px rgba(0,0,0,0.4)", overflow:"hidden",
+          }}>
+            {/* Input row */}
+            <div style={{ display:"flex", alignItems:"center", padding:"14px 16px", borderBottom:`1px solid ${C.outlineV}33`, gap:"10px" }}>
+              <span style={{ fontSize:"16px", opacity:0.45, flexShrink:0 }}>🔍</span>
+              <input
+                autoFocus
+                placeholder="Search itinerary, bookings, packing…"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                onKeyDown={e => { if (e.key === "Escape") { setSearchOpen(false); setSearchQuery(""); } }}
+                style={{ flex:1, background:"transparent", border:"none", outline:"none", fontSize:"15px", color:C.onSurface, fontFamily:sans }}
+              />
+              {searchQuery && <button onClick={() => setSearchQuery("")} style={{ background:"none", border:"none", cursor:"pointer", fontSize:"13px", color:C.onSurfaceV, padding:"0 4px", flexShrink:0 }}>✕</button>}
+            </div>
+
+            {/* Results */}
+            <div style={{ maxHeight:"65vh", overflowY:"auto" }}>
+              {!searchQuery.trim() ? (
+                <div style={{ padding:"20px 16px", color:C.onSurfaceV, fontSize:"12px", textAlign:"center", fontFamily:sans }}>
+                  Type to search across all itinerary, bookings and packing
+                </div>
+              ) : searchResults.length === 0 ? (
+                <div style={{ padding:"24px 16px", textAlign:"center", color:C.onSurfaceV, fontSize:"13px", fontFamily:sans }}>
+                  No results for <strong>"{searchQuery}"</strong>
+                </div>
+              ) : (
+                [["itinerary","Itinerary"],["tasks","Bookings"],["packing","Packing"]].map(([section, label]) => {
+                  const items = searchResults.filter(r => r.section === section);
+                  if (!items.length) return null;
+                  return (
+                    <div key={section}>
+                      <div style={{ padding:"7px 16px", fontSize:"8px", letterSpacing:"2.5px", fontWeight:700, textTransform:"uppercase", color:C.onSurfaceV, background:C.surfaceLow, fontFamily:sans }}>
+                        {label} · {items.length} result{items.length>1?"s":""}
+                      </div>
+                      {items.map((result, i) => (
+                        <div key={i} onClick={() => navigateToResult(result)} style={{
+                          padding:"10px 16px", cursor:"pointer", borderBottom:`1px solid ${C.outlineV}22`,
+                          transition:"background 0.1s",
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.background = C.surfaceLow}
+                        onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                          {section === "itinerary" && (
+                            <>
+                              <div style={{ fontSize:"13px", color:C.onSurface, lineHeight:1.4, fontFamily:sans }}>{highlight(result.item.text, searchQuery)}</div>
+                              <div style={{ fontSize:"9px", color:C.onSurfaceV, marginTop:"3px", letterSpacing:"1px", fontFamily:sans, textTransform:"uppercase" }}>
+                                <span style={{ color: result.city.color, fontWeight:700 }}>{result.city.name}</span>
+                                {" · "}{result.day.date}{" — "}{result.day.label}
+                              </div>
+                            </>
+                          )}
+                          {section === "tasks" && (
+                            <>
+                              <div style={{ fontSize:"13px", color:C.onSurface, lineHeight:1.4, fontFamily:sans }}>{highlight(result.task.text, searchQuery)}</div>
+                              <div style={{ fontSize:"9px", color:C.onSurfaceV, marginTop:"3px", letterSpacing:"1px", fontFamily:sans, textTransform:"uppercase" }}>
+                                {result.task.city}{" · "}<span style={{ color: urgencyConfig[result.task.urgency]?.color }}>{result.task.urgency}</span>
+                              </div>
+                            </>
+                          )}
+                          {section === "packing" && (
+                            <div style={{ fontSize:"13px", color:C.onSurface, lineHeight:1.4, fontFamily:sans }}>{highlight(result.item.text, searchQuery)}</div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── UNDO TOAST ── */}
       {undoAction && (
