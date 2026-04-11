@@ -99,7 +99,7 @@ const DARK_URGENCY = {
 };
 
 // ─── DEPARTURE & HELPERS ──────────────────────────────────────────────────────
-const DEPARTURE = new Date("2026-04-20");
+const DEPARTURE = new Date("2026-04-19");
 
 function getCountdown() {
   const today = new Date(); today.setHours(0,0,0,0);
@@ -149,21 +149,25 @@ const PRE_TRIP_TASKS = [
 // ─── ITINERARY DATA ───────────────────────────────────────────────────────────
 const cities = [
   {
-    name:"OSAKA", dates:"Apr 20 – 24", nights:"4 nights",
+    name:"OSAKA", dates:"Apr 19 – 24", nights:"5 nights",
     hotel:"Henn na Hotel Shinsaibashi", color:"#bc002d", kanji:"大阪",
     days:[
-      { date:"Apr 20", day:"Sun", isoDate:"2026-04-20", label:"Arrival", items:[
+      { date:"Apr 19", day:"Sun", isoDate:"2026-04-19", label:"Flight Day ✈️", items:[
+        { id:"o-1-0", type:"travel", text:"Depart Budapest Liszt Ferenc Airport → connect via Dubai/Doha/Frankfurt" },
+        { id:"o-1-1", type:"travel", text:"Long-haul flight to Osaka Kansai (KIX) — ~14–16 hrs total journey" },
+      ]},
+      { date:"Apr 20", day:"Mon", isoDate:"2026-04-20", label:"Arrival", items:[
         { id:"o0-0", type:"travel", text:"Arrive Kansai Airport → Haruka Express to Namba (~50 min)" },
         { id:"o0-1", type:"hotel",  text:"Check in · Henn na Hotel · robot dinosaur welcome 🦕", map:"https://maps.google.com/?cid=17543935335039745722" },
         { id:"o0-2", type:"sight",  text:"Dotonbori night walk — Glico Man, takoyaki, neon reflections on the canal", map:"https://maps.google.com/?cid=16446419638008461065" },
       ]},
-      { date:"Apr 21", day:"Mon", isoDate:"2026-04-21", label:"Classic Osaka + teamLab 🌿", items:[
+      { date:"Apr 21", day:"Tue", isoDate:"2026-04-21", label:"Classic Osaka + teamLab 🌿", items:[
         { id:"o1-0", type:"sight", text:"Osaka Castle (9am) — moat walk, free park, optional museum ¥600", map:"https://maps.google.com/?cid=1081374622389182017" },
         { id:"o1-1", type:"food",  text:"Kuromon Market (11am) — wagyu skewers, fresh seafood, tamagoyaki. Bring cash!", map:"https://maps.google.com/?cid=12402117845945925953" },
         { id:"o1-2", type:"sight", text:"Shinsekai district (5:30pm) — retro neon, kushikatsu restaurants, arcades", map:"https://maps.google.com/?cid=3941168473429300987" },
         { id:"o1-3", type:"book",  text:"teamLab Botanical Garden Osaka (evening) — light art installations in Nagai Botanical Garden. BOOK AHEAD", map:"https://www.google.com/maps/search/teamLab+Botanical+Garden+Osaka+Nagai" },
       ]},
-      { date:"Apr 22", day:"Tue", isoDate:"2026-04-22", label:"Nara Day Trip 🦌", items:[
+      { date:"Apr 22", day:"Wed", isoDate:"2026-04-22", label:"Nara Day Trip 🦌", items:[
         { id:"o2-0", type:"travel", text:"Kintetsu Namba → Kintetsu Nara Limited Express (~40 min, ¥720pp). No reservation needed" },
         { id:"o2-1", type:"sight",  text:"Nara Deer Park (9am) — bow to the deer, they bow back. Shika senbei ¥200. Midweek = far fewer crowds!", map:"https://maps.google.com/?cid=17972930374069941334" },
         { id:"o2-2", type:"sight",  text:"Tōdai-ji (10am) — Japan's largest Buddha (15m). Squeeze through the wooden pillar for luck!", map:"https://maps.google.com/?cid=17911005107283377295" },
@@ -172,7 +176,7 @@ const cities = [
         { id:"o2-5", type:"travel", text:"Return Kintetsu Nara → Namba (~40 min)" },
         { id:"o2-6", type:"sight",  text:"Free afternoon in Osaka — Dotonbori stroll, Amerika Mura, or rest before tomorrow's teamLab", map:"https://maps.google.com/?cid=16446419638008461065" },
       ]},
-      { date:"Apr 23", day:"Wed", isoDate:"2026-04-23", label:"Himeji Castle + Kobe 🏯", items:[
+      { date:"Apr 23", day:"Thu", isoDate:"2026-04-23", label:"Himeji Castle + Kobe 🏯", items:[
         { id:"o3-0", type:"travel", text:"JR Shinkaisoku from Osaka → Himeji (~60 min). No reservation needed" },
         { id:"o3-1", type:"coffee", text:"Hamamoto Coffee on Miyuki Street — famous almond toast, local Himeji favourite", map:"https://www.google.com/maps/search/Hamamoto+Coffee+Himeji" },
         { id:"o3-2", type:"sight",  text:"Himeji Castle (9am) — UNESCO World Heritage, Japan's most intact original castle. White Heron. Allow 2.5 hrs for castle + grounds. ¥2,500pp from 2026", map:"https://www.google.com/maps/search/Himeji+Castle" },
@@ -182,7 +186,7 @@ const cities = [
         { id:"o3-6", type:"sight",  text:"Kobe Harborland (3pm) — waterfront walk, Ferris wheel, Rainbow Bridge views. Great at sunset", map:"https://maps.google.com/?cid=12749193704110128037" },
         { id:"o3-7", type:"travel", text:"Return to Osaka from Kobe (~25 min via Hanshin/JR)" },
       ]},
-      { date:"Apr 24", day:"Thu", isoDate:"2026-04-24", label:"Shinsaibashi → Kyoto", items:[
+      { date:"Apr 24", day:"Fri", isoDate:"2026-04-24", label:"Shinsaibashi → Kyoto", items:[
         { id:"o4-0", type:"sight",  text:"Shinsaibashi covered arcade (10am) — souvenirs, cosmetics, bakeries", map:"https://maps.google.com/?cid=7087755665176380195" },
         { id:"o4-1", type:"sight",  text:"Amerika Mura (11:15am) — vintage clothing, street art, Triangle Park", map:"https://maps.google.com/?cid=7984796630724712892" },
         { id:"o4-2", type:"travel", text:"Check out · Shin-Osaka → Kyoto Shinkansen (13 min)" },
@@ -193,18 +197,18 @@ const cities = [
     name:"KYOTO", dates:"Apr 24 – 28", nights:"4 nights",
     hotel:"Hotel Tavinos Kyoto", color:"#4338ca", kanji:"京都",
     days:[
-      { date:"Apr 24", day:"Thu", isoDate:"2026-04-24", label:"Arrival & Gion", items:[
+      { date:"Apr 24", day:"Fri", isoDate:"2026-04-24", label:"Arrival & Gion", items:[
         { id:"k0-0", type:"hotel",  text:"Check in · Hotel Tavinos · near Kyoto Station", map:"https://maps.google.com/?cid=9422392276212255335" },
         { id:"k0-1", type:"coffee", text:"Walden Woods Kyoto or Blue Bottle Coffee — settle in afternoon", map:"https://www.google.com/maps/place/Walden+Woods+Kyoto/data=!4m2!3m1!1s0x600108bb1d97aaab:0xf34fa8baf809718d" },
         { id:"k0-2", type:"sight",  text:"Gion evening walk (7pm) — Hanamikoji Street, watch for maiko at dusk", map:"https://maps.google.com/?cid=993893271285067700" },
       ]},
-      { date:"Apr 25", day:"Fri", isoDate:"2026-04-25", label:"Fushimi Inari + teamLab ✨", items:[
+      { date:"Apr 25", day:"Sat", isoDate:"2026-04-25", label:"Fushimi Inari + teamLab ✨", items:[
         { id:"k1-0", type:"sight",  text:"Fushimi Inari Taisha (6:00am!) — dawn gates in total silence, hike 45–120 min up", map:"https://maps.google.com/?cid=8870624639634301673" },
         { id:"k1-1", type:"coffee", text:"WIFE & HUSBAND coffee (late morning) — charming neighbourhood café", map:"https://www.google.com/maps/place/WIFE+%26+HUSBAND/data=!4m2!3m1!1s0x6001081003cad7e5:0xd7cb725a4cbf7492" },
         { id:"k1-2", type:"coffee", text:"Stumptown Coffee Roasters or Slō — afternoon recharge", map:"https://www.google.com/maps/place/Stumptown+Coffee+Roasters/data=!4m2!3m1!1s0x600109de38f945a9:0x54013b28b688b161" },
         { id:"k1-3", type:"book",   text:"teamLab Biovortex Kyoto (6–7pm slot) — 50+ installations, 2.5 hrs. BOOK NOW", map:"https://maps.google.com/?cid=755170767874408507" },
       ]},
-      { date:"Apr 26", day:"Sat", isoDate:"2026-04-26", label:"Kyoto Free Day — Nijojo + Nishiki 🏯", items:[
+      { date:"Apr 26", day:"Sun", isoDate:"2026-04-26", label:"Kyoto Free Day — Nijojo + Nishiki 🏯", items:[
         { id:"k2-0", type:"sight",  text:"Nijojo Castle (9am) — Tokugawa shogun palace, famous nightingale floors, stunning gardens. ¥1,300pp. Go early on Saturday!", map:"https://maps.google.com/?cid=4980455634015699495" },
         { id:"k2-1", type:"food",   text:"Nishiki Market (11am) — Kyoto's kitchen, covered street. Try tofu skewers, pickled veg, matcha, fresh yuba", map:"https://www.google.com/maps/search/Nishiki+Market+Kyoto" },
         { id:"k2-2", type:"coffee", text:"Café Bibliotic Hello! — charming bookshop café in a converted machiya townhouse near Nishiki", map:"https://www.google.com/maps/search/Cafe+Bibliotic+Hello+Kyoto" },
@@ -212,7 +216,7 @@ const cities = [
         { id:"k2-4", type:"sight",  text:"Nanzenji Temple (3pm) — stunning red brick aqueduct, free grounds, optional inner garden ¥600", map:"https://www.google.com/maps/search/Nanzenji+Temple+Kyoto" },
         { id:"k2-5", type:"coffee", text:"Slow evening — neighbourhood coffee near Nanzenji or back in Gion", map:"https://www.google.com/maps/search/specialty+coffee+Nanzenji+Kyoto" },
       ]},
-      { date:"Apr 27", day:"Sun", isoDate:"2026-04-27", label:"Kinkakuji + Arashiyama by Bike 🚲", items:[
+      { date:"Apr 27", day:"Mon", isoDate:"2026-04-27", label:"Kinkakuji + Arashiyama by Bike 🚲", items:[
         { id:"k3-0", type:"sight",  text:"Kinkakuji Golden Pavilion (9am) — arrive at opening, gold reflected in the pond", map:"https://maps.google.com/?cid=1073025677330113631" },
         { id:"k3-1", type:"travel", text:"Bus 101/102: Kinkakuji → Arashiyama (~30 min), then rent a bike near the station" },
         { id:"k3-2", type:"coffee", text:"% ARABICA Kyoto Arashiyama — iconic café by the bamboo grove", map:"https://www.google.com/maps/place/%25+ARABICA+Kyoto+Arashiyama/data=!4m2!3m1!1s0x6001a9ffffef6009:0xec55dccfaa9eb7c0" },
@@ -222,7 +226,7 @@ const cities = [
         { id:"k3-4", type:"coffee", text:"Bread, Espresso and Arashiyama Garden — riverside garden café", map:"https://www.google.com/maps/place/Bread,+Espresso+and+Arashiyama+Garden/data=!4m2!3m1!1s0x6001ab7bfd55e025:0x110aa429a33d33d9" },
         { id:"k3-5", type:"food",   text:"HIGUMA Doughnuts & Coffee Wrights Kyoto — matcha + donut on the way back", map:"https://www.google.com/maps/place/HIGUMA+Doughnuts+%26+Coffee+Wrights%E7%AB%8B%E8%AA%A0%E3%82%AC%E3%83%BC%E3%83%87%E3%83%B3%E3%83%92%E3%83%A5%E3%83%BC%E3%83%AA%E3%83%83%E3%82%AF%E4%BA%AC%E9%83%BD" },
       ]},
-      { date:"Apr 28", day:"Mon", isoDate:"2026-04-28", label:"Kiyomizudera → Kanazawa", items:[
+      { date:"Apr 28", day:"Tue", isoDate:"2026-04-28", label:"Kiyomizudera → Kanazawa", items:[
         { id:"k4-0", type:"sight",  text:"Kiyomizudera (6:00am!) — sunrise wooden stage, mist over Kyoto. Back by 8:30am", map:"https://maps.google.com/?cid=7111013964196361402" },
         { id:"k4-1", type:"hotel",  text:"Pack & checkout · Arrange takkyubin for suitcase → Tokyo · Head to Kyoto Station by 10:00am" },
         { id:"k4-2", type:"travel", text:"✓ BOOKED — Thunder-Bird 15 departs Kyoto 10:37 → transfer Tsuruga 9 min → Tsurugi 16 → arrive Kanazawa 12:36. Collect tickets at JR machine with email + PIN" },
@@ -233,7 +237,7 @@ const cities = [
     name:"KANAZAWA", dates:"Apr 28 – 29", nights:"1 night",
     hotel:"Hotel Torifito Kanazawa", color:"#047857", kanji:"金沢",
     days:[
-      { date:"Apr 28", day:"Mon", isoDate:"2026-04-28", label:"Arrive & Full Afternoon", items:[
+      { date:"Apr 28", day:"Tue", isoDate:"2026-04-28", label:"Arrive & Full Afternoon", items:[
         { id:"kz0-0", type:"hotel",  text:"Check in · Hotel Torifito · breakfast included · onsen tonight!", map:"https://maps.google.com/?cid=7248822591702183339" },
         { id:"kz0-1", type:"food",   text:"Omicho Market (2:30pm) — snow crab, botan ebi, sea urchin kaisendon. Bring cash!", map:"https://maps.google.com/?cid=13831724870425457829" },
         { id:"kz0-2", type:"sight",  text:"Kanazawa Castle Park (3:45pm) — free, white tiled rooflines and stone walls", map:"https://maps.google.com/?cid=12116680391895948874" },
@@ -241,7 +245,7 @@ const cities = [
         { id:"kz0-4", type:"sight",  text:"Higashi Chaya District (6:15pm) — Edo teahouses at dusk, gold leaf soft cream", map:"https://maps.google.com/?cid=13514310865568533876" },
         { id:"kz0-5", type:"hotel",  text:"Hotel onsen ♨️ — well deserved after a marathon travel + sightseeing day", map:"https://maps.google.com/?cid=7248822591702183339" },
       ]},
-      { date:"Apr 29", day:"Tue", isoDate:"2026-04-29", label:"Morning → Takayama", items:[
+      { date:"Apr 29", day:"Wed", isoDate:"2026-04-29", label:"Morning → Takayama", items:[
         { id:"kz1-0", type:"sight",  text:"Nagamachi Samurai District (8:30am) — Nomura-ke mansion garden ¥550. Go early!", map:"https://maps.google.com/?cid=11384741629417725499" },
         { id:"kz1-1", type:"sight",  text:"21st Century Museum of Contemporary Art (10am) — 'Swimming Pool' installation", map:"https://maps.google.com/?cid=5848489108542154945" },
         { id:"kz1-2", type:"travel", text:"✓ BOOKED — Nohi Bus: Kanazawa Sta. West Exit No.4 departs 13:20 → arrive Takayama Nohi Bus Center 15:35. Direct, scenic, no transfer" },
@@ -252,13 +256,13 @@ const cities = [
     name:"TAKAYAMA", dates:"Apr 29 – May 1", nights:"2 nights",
     hotel:"Hotel around Takayama Ascend Collection", color:"#92400e", kanji:"高山",
     days:[
-      { date:"Apr 29", day:"Tue", isoDate:"2026-04-29", label:"Arrive & Old Town", items:[
+      { date:"Apr 29", day:"Wed", isoDate:"2026-04-29", label:"Arrive & Old Town", items:[
         { id:"t0-0", type:"hotel",  text:"Check in · Hotel around Takayama · onsen + lounge access", map:"https://maps.google.com/?cid=3262508364740780920" },
         { id:"t0-1", type:"sight",  text:"Sanmachi Suji (3pm) — Edo merchant street, sake breweries (sugidama balls!), Hida beef bun", map:"https://maps.google.com/?cid=9208866768243964046" },
         { id:"t0-2", type:"food",   text:"Sake tasting + mitarashi dango at the historic breweries along the canal", map:"https://maps.google.com/?cid=9208866768243964046" },
         { id:"t0-3", type:"sight",  text:"Miyagawa riverside walk (5:30pm) — scope out tomorrow's morning market", map:"https://maps.google.com/?cid=5487124927485698262" },
       ]},
-      { date:"Apr 30", day:"Wed", isoDate:"2026-04-30", label:"Shirakawa-go + Village Walk 🏔", items:[
+      { date:"Apr 30", day:"Thu", isoDate:"2026-04-30", label:"Shirakawa-go + Village Walk 🏔", items:[
         { id:"t1-0", type:"food",   text:"Miyagawa Morning Market (6:45am) — quick breakfast before bus. Grab something to go!", map:"https://maps.google.com/?cid=5487124927485698262" },
         { id:"t1-1", type:"travel", text:"✓ BOOKED — Nohi Bus departs Takayama 07:20 → arrive Shirakawa-go (Ogimachi) 08:10" },
         { id:"t1-2", type:"sight",  text:"Shirakawa-go — thatched gassho-zukuri farmhouses. Hike to Shiroyama Hill viewpoint!", map:"https://maps.google.com/?cid=14755289620389823992" },
@@ -267,7 +271,7 @@ const cities = [
         { id:"t1-4", type:"sight",  text:"Higashiyama Promenade (3pm) — 3.5km free walk through 12 temples & shrines", map:"https://maps.google.com/?cid=18177616014009134586" },
         { id:"t1-5", type:"sight",  text:"Hida Folk Village Museum (4:45pm) — open-air gassho farmhouses, very peaceful", map:"https://maps.google.com/?cid=15466683148941065284" },
       ]},
-      { date:"May 1", day:"Thu", isoDate:"2026-05-01", label:"Slow Morning → Tokyo 🚅", items:[
+      { date:"May 1", day:"Fri", isoDate:"2026-05-01", label:"Slow Morning → Tokyo 🚅", items:[
         { id:"t2-0", type:"food",   text:"Miyagawa Morning Market (7am) — riverside breakfast, final Takayama morning. No rush today!", map:"https://maps.google.com/?cid=5487124927485698262" },
         { id:"t2-1", type:"sight",  text:"Takayama Jinya (8:45am) — Japan's only surviving Edo govt. building, ¥440, 45 min", map:"https://maps.google.com/?cid=11021987317374357985" },
         { id:"t2-3", type:"food",   text:"Final Hida beef croquette or coffee stroll through Sanmachi Suji before checkout", map:"https://maps.google.com/?cid=9208866768243964046" },
@@ -279,12 +283,12 @@ const cities = [
     name:"TOKYO", dates:"May 1 – 9", nights:"8 nights",
     hotel:"Hotel Metropolitan Edmont", color:"#0369a1", kanji:"東京",
     days:[
-      { date:"May 1", day:"Thu", isoDate:"2026-05-01", label:"Arrive & Akihabara", items:[
+      { date:"May 1", day:"Fri", isoDate:"2026-05-01", label:"Arrive & Akihabara", items:[
         { id:"tk0-0", type:"hotel",  text:"Check in · Hotel Metropolitan Edmont · Iidabashi. Skytree visible from high floors!", map:"https://maps.google.com/?cid=1907153616724399869" },
         { id:"tk0-1", type:"coffee", text:"Donish Coffee Company 神楽坂 — 10 min walk from hotel, your neighbourhood café all week", map:"https://www.google.com/maps/place/Donish+Coffee+Company+%E7%A5%9E%E6%A5%BD%E5%9D%82%E3%82%B3%E3%83%BC%E3%83%92%E3%83%BC%E3%82%B9%E3%82%BF%E3%83%B3%E3%83%89/data=!4m2!3m1!1s0x60188da1f0609ab3:0x4c6da5443a130276" },
         { id:"tk0-2", type:"sight",  text:"Akihabara Electric Town evening — multi-floor game/anime shops, maid cafés", map:"https://maps.google.com/?cid=8588181514563389831" },
       ]},
-      { date:"May 2", day:"Fri", isoDate:"2026-05-02", label:"East Tokyo: Tsukiji + Asakusa + Ueno", items:[
+      { date:"May 2", day:"Sat", isoDate:"2026-05-02", label:"East Tokyo: Tsukiji + Asakusa + Ueno", items:[
         { id:"tk1-0", type:"food",   text:"Tsukiji Outer Market (8am) — tuna sushi, tamagoyaki, grilled scallops. Bring cash!", map:"https://maps.google.com/?cid=11704332758705177180" },
         { id:"tk1-1", type:"coffee", text:"FUGLEN ASAKUSA — Norwegian waffle ⭐ Must try", map:"https://www.google.com/maps/place/FUGLEN+ASAKUSA/data=!4m2!3m1!1s0x60188f94c3ce55cd:0xba4fa108446d25ef" },
         { id:"tk1-2", type:"coffee", text:"ARC coffee — compact, good for on the go", map:"https://www.google.com/maps/place/ARC/data=!4m2!3m1!1s0x60188fa1d273803f:0x737fb67f3409e7bd" },
@@ -293,14 +297,14 @@ const cities = [
         { id:"tk1-5", type:"sight",  text:"Ueno Park (1pm) — lotus pond, temples, street performers", map:"https://maps.google.com/?cid=12811393089244390490" },
         { id:"tk1-6", type:"sight",  text:"Tokyo National Museum (2pm) — open until 8pm Fridays! World's best Japanese art collection", map:"https://maps.google.com/?cid=2535480516976146397" },
       ]},
-      { date:"May 3", day:"Sat", isoDate:"2026-05-03", label:"Shinjuku + Nakameguro", items:[
+      { date:"May 3", day:"Sun", isoDate:"2026-05-03", label:"Shinjuku + Nakameguro", items:[
         { id:"tk2-0", type:"sight",  text:"Shinjuku Gyoen National Garden (9am) — late-bloom cherry varieties possible, ¥500", map:"https://maps.google.com/?cid=7646744610971579015" },
         { id:"tk2-1", type:"coffee", text:"ONIBUS COFFEE Nakameguro — Nakameguro detour en route", map:"https://www.google.com/maps/place/ONIBUS+COFFEE+Nakameguro+3+Chome/data=!4m2!3m1!1s0x60188b5e38940a75:0xdf3b552f5851b2f7" },
         { id:"tk2-2", type:"coffee", text:"little cloud coffee Nakameguro — cookies are amazing ⭐", map:"https://www.google.com/maps/place/little+cloud+coffee+NAKAMEGURO/data=!4m2!3m1!1s0x60188b098aa7ccdb:0xaed8b9f0cdc9db3d" },
         { id:"tk2-3", type:"food",   text:"Seirinkan pizza — Nakameguro, dinner", map:"https://www.google.com/maps/place/Seirinkan/data=!4m2!3m1!1s0x60188b4855c58539:0x3c843f6645d24cd0" },
         { id:"tk2-4", type:"sight",  text:"Shibuya Crossing (8pm) — join the 3,000-person scramble OR watch from Starbucks 2nd floor", map:"https://maps.google.com/?cid=2370410330085837161" },
       ]},
-      { date:"May 4", day:"Sun", isoDate:"2026-05-04", label:"Harajuku + Shibuya Sky 🌅", items:[
+      { date:"May 4", day:"Mon", isoDate:"2026-05-04", label:"Harajuku + Shibuya Sky 🌅", items:[
         { id:"tk3-0", type:"coffee", text:"Coffee Supreme Tokyo + Camelback breakfast sandwiches next door ⭐", map:"https://www.google.com/maps/place/Coffee+Supreme+Tokyo/data=!4m2!3m1!1s0x60188cad5f88c001:0x44a6e1bd31a54818" },
         { id:"tk3-1", type:"sight",  text:"Meiji Jingu (9am) — cedar forest shrine, peaceful even on Sundays if you go early", map:"https://maps.google.com/?cid=10361244767556222835" },
         { id:"tk3-2", type:"sight",  text:"Takeshita Street Harajuku — crepes, quirky fashion, people-watching", map:"https://maps.google.com/?cid=14032878377351675573" },
@@ -310,34 +314,34 @@ const cities = [
         { id:"tk3-6", type:"coffee", text:"LAMBERT — coffee + matcha, Shibuya area afternoon", map:"https://www.google.com/maps/place/LAMBERT/data=!4m2!3m1!1s0x60188d002676159b:0xd25a5a2889e8e8ba" },
         { id:"tk3-7", type:"book",   text:"Shibuya Sky sunset (5:30pm) — 360° open-air rooftop, Mt Fuji on clear days. BOOK ~Apr 20", map:"https://maps.google.com/?cid=8067212359343678579" },
       ]},
-      { date:"May 5", day:"Mon", isoDate:"2026-05-05", label:"Hakone Day Trip 🏔️", items:[
+      { date:"May 5", day:"Tue", isoDate:"2026-05-05", label:"Hakone Day Trip 🏔️", items:[
         { id:"tk4-0", type:"book",   text:"Romancecar from Shinjuku → Hakone-Yumoto (~75 min, no transfer). Buy Free Pass + ¥1,150pp surcharge via Odakyu EMot", map:"https://www.google.com/maps/search/Hakone-Yumoto+Station" },
         { id:"tk4-1", type:"sight",  text:"Hakone Open-Air Museum — sculpture park with foot onsen ♨️ Bring a towel. Picasso pavilion!", map:"https://maps.google.com/?cid=6381101115362667615" },
         { id:"tk4-2", type:"sight",  text:"Hakone Ropeway over Owakudani volcanic valley — sulphur vents, steaming earth. All covered by Free Pass", map:"https://www.google.com/maps/search/Hakone+Ropeway+Owakudani" },
         { id:"tk4-3", type:"sight",  text:"Lake Ashi Pirate Ship cruise — Mt Fuji views on clear days. Free Pass covers this too!", map:"https://www.google.com/maps/search/Lake+Ashi+Hakone" },
         { id:"tk4-4", type:"travel", text:"Return Romancecar to Shinjuku evening" },
       ]},
-      { date:"May 6", day:"Tue", isoDate:"2026-05-06", label:"Lake Kawaguchi / Mt Fuji 🗻", items:[
+      { date:"May 6", day:"Wed", isoDate:"2026-05-06", label:"Lake Kawaguchi / Mt Fuji 🗻", items:[
         { id:"tk5-0", type:"book",   text:"Highway bus Busta Shinjuku → Kawaguchiko (~1h 45min). Book 2–3 weeks ahead", map:"https://www.google.com/maps/search/Busta+Shinjuku" },
         { id:"tk5-1", type:"sight",  text:"Lake Kawaguchi (9am) — best Fuji visibility in the morning before clouds build", map:"https://maps.google.com/?cid=3011696811526290759" },
         { id:"tk5-2", type:"sight",  text:"Oishi Park — classic Fuji + lakeside shot with flower fields (20 min walk east)", map:"https://www.google.com/maps/search/Oishi+Park+Kawaguchiko" },
         { id:"tk5-3", type:"food",   text:"Lunch: Local Hoto noodle soup — thick flat noodles in miso, a Fujisan specialty", map:"https://www.google.com/maps/search/Hoto+noodle+Kawaguchiko" },
         { id:"tk5-4", type:"travel", text:"Return bus ~3–4pm" },
       ]},
-      { date:"May 7", day:"Wed", isoDate:"2026-05-07", label:"teamLab Planets + Odaiba 🌊", items:[
+      { date:"May 7", day:"Thu", isoDate:"2026-05-07", label:"teamLab Planets + Odaiba 🌊", items:[
         { id:"tk6-0", type:"book",   text:"teamLab Planets Tokyo (10:00am slot) — barefoot water rooms, completely different from Biovortex. ~1.5 hrs. Tokyo Metro Yurakucho Line from Iidabashi → Toyosu direct, ~20 min. BOOK NOW", map:"https://maps.google.com/?cid=7918542870314997282" },
         { id:"tk6-1", type:"travel", text:"Yurikamome monorail → Odaiba (the ride itself is spectacular)" },
         { id:"tk6-2", type:"sight",  text:"Odaiba Seaside Park — Statue of Liberty, Rainbow Bridge, Tokyo skyline", map:"https://maps.google.com/?cid=9066800158489327401" },
         { id:"tk6-3", type:"food",   text:"Lunch: DiverCity or Decks mall ramen/sushi options", map:"https://www.google.com/maps/search/DiverCity+Tokyo+Plaza" },
       ]},
-      { date:"May 8", day:"Thu", isoDate:"2026-05-08", label:"Warner Bros. Studio Tour + Ginza 🎬", items:[
+      { date:"May 8", day:"Fri", isoDate:"2026-05-08", label:"Warner Bros. Studio Tour + Ginza 🎬", items:[
         { id:"tk7-0", type:"book",   text:"Warner Bros. Studio Tour Tokyo — The Making of Harry Potter (10am). Great Hall, Diagon Alley, Forbidden Forest, actual film props & costumes. ~3–4 hrs. Audio guide strongly recommended. BOOK NOW at wbstudiotour.jp", map:"https://www.google.com/maps/search/Warner+Bros+Studio+Tour+Tokyo+Toshimaen" },
         { id:"tk7-1", type:"travel", text:"Train from Toshimaen → central Tokyo (~30 min via Seibu Ikebukuro or Oedo Line)" },
         { id:"tk7-2", type:"coffee", text:"Glitch Coffee & Roasters GINZA — arrive 30 min before open ⭐ Worth the wait", map:"https://www.google.com/maps/place/Glitch+Coffee+and+Roasters+GINZA/data=!4m2!3m1!1s0x60188bfa45634c13:0x6abbdc48213cb890" },
         { id:"tk7-3", type:"sight",  text:"Ginza — Ginza Six food hall, flagship stores, gallery hopping", map:"https://www.google.com/maps/search/Ginza+Six+Tokyo" },
         { id:"tk7-4", type:"book",   text:"Farewell dinner — tasting menu or omakase in Ginza. BOOK AHEAD!", map:"https://www.google.com/maps/search/fine+dining+Ginza+Tokyo" },
       ]},
-      { date:"May 9", day:"Fri", isoDate:"2026-05-09", label:"Departure ✈️", items:[
+      { date:"May 9", day:"Sat", isoDate:"2026-05-09", label:"Departure ✈️", items:[
         { id:"tk8-0", type:"travel", text:"N'EX Narita Express from Tokyo Station → Narita (~60 min, ¥3,070pp). Take JR Chuo-Sobu from Iidabashi → Tokyo Station (2 stops, 5 min). Allow 3 hrs at airport!" },
         { id:"tk8-1", type:"travel", text:"Tokyo Narita → Shanghai Pudong → Budapest (China Eastern)" },
         { id:"tk8-2", type:"coffee", text:"Last Japanese coffee at the airport — take your Koffee Mameya beans home!" },
@@ -753,7 +757,7 @@ export default function JapanItinerary() {
   @media print { body { padding: 12px 20px; } .city { page-break-inside: avoid; } }
 </style></head><body>
 <h1>Japan 2026 — Itinerary</h1>
-<div class="subtitle">Apr 20 – May 9, 2026 · Osaka · Kyoto · Kanazawa · Takayama · Tokyo</div>`;
+<div class="subtitle">Apr 19 – May 9, 2026 · Osaka · Kyoto · Kanazawa · Takayama · Tokyo</div>`;
 
     cities.forEach(city => {
       html += `<div class="city">`;
@@ -1222,7 +1226,7 @@ export default function JapanItinerary() {
               Japan<br />Itinerary
             </h1>
             <div style={{ textAlign:"right" }}>
-              <div style={{ fontSize:"10px", letterSpacing:"3px", color:C.onSurfaceV, fontWeight:600, textTransform:"uppercase" }}>Apr 20 – May 9</div>
+              <div style={{ fontSize:"10px", letterSpacing:"3px", color:C.onSurfaceV, fontWeight:600, textTransform:"uppercase" }}>Apr 19 – May 9</div>
               <div style={{ fontSize:"10px", letterSpacing:"1px", color: synced ? "#047857" : "#b45309", marginTop:"4px" }}>
                 {synced ? "🔗 synced" : "⏳ connecting…"}
               </div>
