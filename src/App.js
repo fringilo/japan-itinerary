@@ -412,6 +412,8 @@ export default function JapanItinerary() {
   const [converterDir,setConverterDir]  = useState("jpy-to-eur"); // or "eur-to-jpy"
   const [packingItems,  setPackingItems]  = useState({});  // { id: { id, text, checked } }
   const [packingDraft,  setPackingDraft]  = useState("");
+  const [linksItems,    setLinksItems]    = useState({});  // { id: { id, text, url, checked } }
+  const [linksDraft,    setLinksDraft]    = useState({ text:"", url:"" });
   const [expenses,      setExpenses]      = useState({});  // { catId: { expId: { id, name, amountEur, amountJpy? } } }
   const [openExpenses,  setOpenExpenses]  = useState({});  // { catId: bool }
   const [expDraft,      setExpDraft]      = useState({});  // { catId: { name, amount, currency } }
@@ -444,6 +446,7 @@ export default function JapanItinerary() {
       ["jp-item-order",      setItemOrder],
       ["jp-booking-done",    setBookingDone],
       ["jp-packing",         setPackingItems],
+      ["jp-links",           setLinksItems],
     ];
     const unsubs = bindings.map(([key, setter]) =>
       onValue(ref(db, `japan2026/${key}`), snap => { if (snap.exists()) setter(snap.val()); })
@@ -817,6 +820,34 @@ export default function JapanItinerary() {
     setPackingItems(next); fbSet("jp-packing", next);
   };
 
+  const addLinkItem = () => {
+    const text = linksDraft.text.trim();
+    if (!text) return;
+    const id = `lnk-${Date.now()}`;
+    const entry = { id, text, checked: false };
+    if (linksDraft.url.trim()) entry.url = linksDraft.url.trim();
+    const next = { ...linksItems, [id]: entry };
+    setLinksItems(next); fbSet("jp-links", next);
+    setLinksDraft({ text:"", url:"" });
+  };
+  const toggleLinkItem = (id) => {
+    const next = { ...linksItems, [id]: { ...linksItems[id], checked: !linksItems[id].checked } };
+    setLinksItems(next); fbSet("jp-links", next);
+  };
+  const deleteLinkItem = (id) => {
+    const item = linksItems[id];
+    const next = { ...linksItems }; delete next[id];
+    setLinksItems(next); fbSet("jp-links", next);
+    pushUndo(`Deleted "${item.text}"`, () => {
+      setLinksItems(prev => { const n={...prev,[id]:item}; fbSet("jp-links",n); return n; });
+    });
+  };
+  const clearLinkChecks = () => {
+    const next = {};
+    Object.values(linksItems).forEach(i => { next[i.id] = { ...i, checked: false }; });
+    setLinksItems(next); fbSet("jp-links", next);
+  };
+
   const expTotalForCat = (catId, updatedExps) => {
     const src = updatedExps || expenses[catId] || {};
     return Object.values(src).reduce((s, e) => s + (e.amountEur || 0), 0);
@@ -1052,6 +1083,10 @@ export default function JapanItinerary() {
       if (item.text?.toLowerCase().includes(q))
         results.push({ section:"packing", item });
     });
+    Object.values(linksItems).forEach(item => {
+      if (item.text?.toLowerCase().includes(q) || item.url?.toLowerCase().includes(q))
+        results.push({ section:"links", item });
+    });
     return results;
   })();
 
@@ -1073,6 +1108,8 @@ export default function JapanItinerary() {
       setActiveTab("tasks");
     } else if (result.section === "packing") {
       setActiveTab("packing");
+    } else if (result.section === "links") {
+      setActiveTab("links");
     }
   };
 
@@ -1260,6 +1297,7 @@ export default function JapanItinerary() {
               ["tasks", `Bookings${criticalLeft>0?` · ${criticalLeft}`:""}`],
               ["budget","Budget"],
               ["packing","Packing"],
+              ["links","Links & Notes"],
             ].map(([val,lbl]) => (
               <button key={val} onClick={() => setActiveTab(val)} style={{
                 paddingBottom:"12px", fontSize:"11px", fontWeight:700, letterSpacing:"2px",
@@ -2467,6 +2505,122 @@ export default function JapanItinerary() {
             </div>
           );
         })()}
+
+        {/* ── LINKS & NOTES TAB ── */}
+        {activeTab === "links" && (() => {
+          const items = Object.values(linksItems);
+          const total = items.length;
+          const checked = items.filter(i => i.checked).length;
+          return (
+            <div>
+              <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:"20px" }}>
+                <div>
+                  <div style={{ fontSize:"9px", letterSpacing:"3px", textTransform:"uppercase", color:C.onSurfaceV, fontWeight:600, marginBottom:"4px" }}>Links & Notes</div>
+                  {total > 0 && (
+                    <div style={{ fontSize:"12px", color:C.onSurfaceV }}>
+                      {total} item{total !== 1 ? "s" : ""}{checked > 0 ? ` · ${checked} checked` : ""}
+                    </div>
+                  )}
+                </div>
+                {checked > 0 && (
+                  <button onClick={clearLinkChecks} style={{
+                    padding:"5px 14px", borderRadius:"2px", fontSize:"10px", cursor:"pointer",
+                    background:"transparent", border:`1px solid ${C.outlineV}`,
+                    color:C.onSurfaceV, fontFamily:sans, fontWeight:600, letterSpacing:"1px",
+                  }}>CLEAR CHECKS</button>
+                )}
+              </div>
+
+              <div style={{ marginBottom:"16px" }}>
+                {total === 0 && (
+                  <div style={{ textAlign:"center", padding:"32px 0", color:C.onSurfaceV, fontSize:"13px", opacity:0.6 }}>
+                    No items yet — add a link or note below
+                  </div>
+                )}
+                {items.map(item => (
+                  <div key={item.id} style={{
+                    display:"flex", alignItems:"center", gap:"12px",
+                    padding:"12px 0", borderBottom:`1px solid ${C.outlineV}22`,
+                  }}>
+                    <div onClick={() => toggleLinkItem(item.id)} style={{
+                      width:"18px", height:"18px", borderRadius:"3px", flexShrink:0, cursor:"pointer",
+                      border:`2px solid ${item.checked ? C.primary : C.outlineV}`,
+                      background: item.checked ? C.primary : "transparent",
+                      display:"flex", alignItems:"center", justifyContent:"center",
+                      transition:"all 0.15s",
+                    }}>
+                      {item.checked && <span style={{ color:"#fff", fontSize:"11px", lineHeight:1, fontWeight:700 }}>✓</span>}
+                    </div>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div onClick={() => toggleLinkItem(item.id)} style={{
+                        fontSize:"14px", cursor:"pointer",
+                        color: item.checked ? C.onSurfaceV : C.onSurface,
+                        textDecoration: item.checked ? "line-through" : "none",
+                        opacity: item.checked ? 0.5 : 1,
+                        transition:"all 0.18s",
+                      }}>{item.text}</div>
+                      {item.url && (
+                        <a href={item.url} target="_blank" rel="noopener noreferrer" style={{
+                          fontSize:"11px", color:C.primary, textDecoration:"none",
+                          display:"block", marginTop:"3px",
+                          overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap",
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.textDecoration="underline"}
+                        onMouseLeave={e => e.currentTarget.style.textDecoration="none"}
+                        >↗ {item.url}</a>
+                      )}
+                    </div>
+                    <span onClick={() => deleteLinkItem(item.id)} style={{
+                      fontSize:"16px", cursor:"pointer", color:C.outlineV, flexShrink:0,
+                      lineHeight:1, padding:"2px 4px", transition:"color 0.15s",
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.color=C.primary}
+                    onMouseLeave={e => e.currentTarget.style.color=C.outlineV}
+                    >×</span>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{
+                padding:"12px", borderRadius:"2px",
+                background:C.surfaceLowest, border:`1px solid ${C.outlineV}`,
+              }}>
+                <input
+                  type="text"
+                  placeholder="Label or note… e.g. Google Maps list, Notion page"
+                  value={linksDraft.text}
+                  onChange={e => setLinksDraft(d => ({...d, text:e.target.value}))}
+                  onKeyDown={e => { if (e.key === "Enter") addLinkItem(); }}
+                  style={{
+                    width:"100%", background:"transparent", border:"none", outline:"none",
+                    fontSize:"13px", color:C.onSurface, fontFamily:sans,
+                    marginBottom:"8px", boxSizing:"border-box",
+                  }}
+                />
+                <div style={{ display:"flex", gap:"8px", alignItems:"center", borderTop:`1px solid ${C.outlineV}33`, paddingTop:"8px" }}>
+                  <input
+                    type="url"
+                    placeholder="URL (optional)… https://"
+                    value={linksDraft.url}
+                    onChange={e => setLinksDraft(d => ({...d, url:e.target.value}))}
+                    onKeyDown={e => { if (e.key === "Enter") addLinkItem(); }}
+                    style={{
+                      flex:1, background:"transparent", border:"none", outline:"none",
+                      fontSize:"12px", color:C.onSurfaceV, fontFamily:sans,
+                    }}
+                  />
+                  <button onClick={addLinkItem} disabled={!linksDraft.text.trim()} style={{
+                    padding:"5px 14px", borderRadius:"2px", fontSize:"10px", cursor:"pointer",
+                    background: linksDraft.text.trim() ? C.primary : C.surfaceHigh,
+                    border:"none", color: linksDraft.text.trim() ? "#fff" : C.onSurfaceV,
+                    fontFamily:sans, fontWeight:700, letterSpacing:"1px", flexShrink:0,
+                    transition:"all 0.15s",
+                  }}>ADD ↵</button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
       </main>
 
       {/* ── SEARCH OVERLAY ── */}
@@ -2488,7 +2642,7 @@ export default function JapanItinerary() {
               <span style={{ fontSize:"16px", opacity:0.45, flexShrink:0 }}>🔍</span>
               <input
                 autoFocus
-                placeholder="Search itinerary, bookings, packing…"
+                placeholder="Search itinerary, bookings, packing, links…"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 onKeyDown={e => { if (e.key === "Escape") { setSearchOpen(false); setSearchQuery(""); } }}
@@ -2501,14 +2655,14 @@ export default function JapanItinerary() {
             <div style={{ maxHeight:"65vh", overflowY:"auto" }}>
               {!searchQuery.trim() ? (
                 <div style={{ padding:"20px 16px", color:C.onSurfaceV, fontSize:"12px", textAlign:"center", fontFamily:sans }}>
-                  Type to search across all itinerary, bookings and packing
+                  Type to search across itinerary, bookings, packing and links
                 </div>
               ) : searchResults.length === 0 ? (
                 <div style={{ padding:"24px 16px", textAlign:"center", color:C.onSurfaceV, fontSize:"13px", fontFamily:sans }}>
                   No results for <strong>"{searchQuery}"</strong>
                 </div>
               ) : (
-                [["itinerary","Itinerary"],["tasks","Bookings"],["packing","Packing"]].map(([section, label]) => {
+                [["itinerary","Itinerary"],["tasks","Bookings"],["packing","Packing"],["links","Links & Notes"]].map(([section, label]) => {
                   const items = searchResults.filter(r => r.section === section);
                   if (!items.length) return null;
                   return (
@@ -2542,6 +2696,12 @@ export default function JapanItinerary() {
                           )}
                           {section === "packing" && (
                             <div style={{ fontSize:"13px", color:C.onSurface, lineHeight:1.4, fontFamily:sans }}>{highlight(result.item.text, searchQuery)}</div>
+                          )}
+                          {section === "links" && (
+                            <>
+                              <div style={{ fontSize:"13px", color:C.onSurface, lineHeight:1.4, fontFamily:sans }}>{highlight(result.item.text, searchQuery)}</div>
+                              {result.item.url && <div style={{ fontSize:"11px", color:C.primary, marginTop:"2px", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{highlight(result.item.url, searchQuery)}</div>}
+                            </>
                           )}
                         </div>
                       ))}
