@@ -74,6 +74,7 @@ const LIGHT_TYPE_CONFIG = {
   travel:     { dot:"#10b981", label:"Transport",       labelColor:"#047857" },
   hotel:      { dot:"#6366f1", label:"Hotel",           labelColor:"#4338ca" },
   book:       { dot:"#8f0020", label:"Needs Booking",  labelColor:"#8f0020" },
+  shopping:   { dot:"#db2777", label:"Shopping",        labelColor:"#9d174d" },
 };
 const DARK_TYPE_CONFIG = {
   sight:      { dot:"#60a5fa", label:"Sightseeing",   labelColor:"#93c5fd" },
@@ -83,6 +84,7 @@ const DARK_TYPE_CONFIG = {
   travel:     { dot:"#34d399", label:"Transport",       labelColor:"#6ee7b7" },
   hotel:      { dot:"#818cf8", label:"Hotel",           labelColor:"#a5b4fc" },
   book:       { dot:"#f87171", label:"Needs Booking",  labelColor:"#fca5a5" },
+  shopping:   { dot:"#f472b6", label:"Shopping",        labelColor:"#fbcfe8" },
 };
 
 const LIGHT_URGENCY = {
@@ -793,6 +795,48 @@ export default function JapanItinerary() {
     win.onload = () => { win.focus(); win.print(); };
   };
 
+  const exportBudgetCSV = () => {
+    const rows = [["Category","Emoji","Budget (€)","Spent (€)","Remaining (€)","Paid","Expense","Amount (€)","Amount (JPY)"]];
+    allBudgetCats.forEach(cat => {
+      const isPaid = paidCats[cat.id] !== undefined ? paidCats[cat.id] : cat.paid;
+      const catExps = Object.values(expenses[cat.id] || {});
+      const expsTotal = catExps.reduce((s, e) => s + (e.amountEur || 0), 0);
+      const spent = catExps.length > 0 ? expsTotal : (Number(spentAmts[cat.id]) || (isPaid ? cat.total : 0));
+      const remaining = cat.total - spent;
+      if (catExps.length > 0) {
+        catExps.forEach((exp, i) => {
+          rows.push([
+            i === 0 ? cat.label : "",
+            i === 0 ? cat.emoji : "",
+            i === 0 ? cat.total.toFixed(2) : "",
+            i === 0 ? spent.toFixed(2) : "",
+            i === 0 ? remaining.toFixed(2) : "",
+            i === 0 ? (isPaid ? "Yes" : "No") : "",
+            `"${(exp.name||"").replace(/"/g,'""')}"`,
+            (exp.amountEur || 0).toFixed(2),
+            exp.amountJpy ? exp.amountJpy : "",
+          ]);
+        });
+      } else {
+        rows.push([cat.label, cat.emoji, cat.total.toFixed(2), spent.toFixed(2), remaining.toFixed(2), isPaid ? "Yes" : "No", "", "", ""]);
+      }
+    });
+    const totalBudgetVal = allBudgetCats.reduce((s, c) => s + c.total, 0);
+    const totalSpentVal  = allBudgetCats.reduce((s, c) => {
+      const isPaid = paidCats[c.id] !== undefined ? paidCats[c.id] : c.paid;
+      const catExps = Object.values(expenses[c.id] || {});
+      const expsTotal = catExps.reduce((s2, e) => s2 + (e.amountEur || 0), 0);
+      return s + (catExps.length > 0 ? expsTotal : (Number(spentAmts[c.id]) || (isPaid ? c.total : 0)));
+    }, 0);
+    rows.push(["TOTAL", "", totalBudgetVal.toFixed(2), totalSpentVal.toFixed(2), (totalBudgetVal - totalSpentVal).toFixed(2), "", "", "", ""]);
+    const csv = rows.map(r => r.join(",")).join("\n");
+    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = "japan2026-budget.csv"; a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const addPackingItem = () => {
     const text = packingDraft.trim();
     if (!text) return;
@@ -1457,7 +1501,7 @@ export default function JapanItinerary() {
                                         <div style={{ fontSize:"9px", letterSpacing:"2px", textTransform:"uppercase", color:C.onSurfaceV, fontWeight:600, marginBottom:"10px" }}>Edit Item</div>
                                         {/* Type pills */}
                                         <div style={{ display:"flex", gap:"6px", flexWrap:"wrap", marginBottom:"10px" }}>
-                                          {Object.entries({ sight:"Sight", food:"Food", coffee:"Coffee", travel:"Travel", hotel:"Hotel", book:"Book" }).map(([val, lbl]) => (
+                                          {Object.entries({ sight:"Sight", food:"Food", coffee:"Coffee", travel:"Travel", hotel:"Hotel", book:"Book", shopping:"Shopping" }).map(([val, lbl]) => (
                                             <button key={val} onClick={() => setEditingItemType(val)}
                                             style={{
                                               padding:"3px 10px", borderRadius:"999px", fontSize:"9px", cursor:"pointer",
@@ -1732,7 +1776,7 @@ export default function JapanItinerary() {
                               }}>
                                 {/* Primary type pills */}
                                 <div style={{ display:"flex", gap:"5px", flexWrap:"wrap", marginBottom:"6px" }}>
-                                  {Object.entries({ sight:"Sight", food:"Food", restaurant:"Restaurant", coffee:"Coffee", travel:"Travel", hotel:"Hotel" }).map(([val, lbl]) => (
+                                  {Object.entries({ sight:"Sight", food:"Food", restaurant:"Restaurant", coffee:"Coffee", travel:"Travel", hotel:"Hotel", shopping:"Shopping" }).map(([val, lbl]) => (
                                     <button key={val} onClick={() => setDraft(p=>({...p, type:val}))} style={{
                                       padding:"3px 9px", borderRadius:"999px", fontSize:"9px", cursor:"pointer",
                                       fontWeight:700, letterSpacing:"1px", textTransform:"uppercase", fontFamily:sans,
@@ -2095,8 +2139,19 @@ export default function JapanItinerary() {
               <div style={{ height:"2px", background:C.surfaceHigh, borderRadius:"2px", overflow:"hidden" }}>
                 <div style={{ height:"100%", width:`${Math.min(100,(totalSpent/totalBudget)*100)}%`, background:C.primary, transition:"width 0.4s" }} />
               </div>
-              <div style={{ fontSize:"10px", color:C.onSurfaceV, marginTop:"6px", textAlign:"right" }}>
-                €{(totalBudget-totalSpent).toLocaleString()} remaining
+              <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginTop:"6px" }}>
+                <button onClick={exportBudgetCSV} style={{
+                  padding:"4px 10px", borderRadius:"2px", fontSize:"9px", cursor:"pointer",
+                  background:"transparent", border:`1px solid ${C.outlineV}`,
+                  color:C.onSurfaceV, fontFamily:sans, fontWeight:700, letterSpacing:"1px",
+                  transition:"all 0.15s",
+                }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor=C.primary; e.currentTarget.style.color=C.primary; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor=C.outlineV; e.currentTarget.style.color=C.onSurfaceV; }}
+                >↓ EXPORT CSV</button>
+                <div style={{ fontSize:"10px", color:C.onSurfaceV }}>
+                  €{(totalBudget-totalSpent).toLocaleString()} remaining
+                </div>
               </div>
             </div>
 
